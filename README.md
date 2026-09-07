@@ -110,12 +110,14 @@ independent implementations alongside the native Rust renderer. Generate PNG
 and SVG versions of the ER all-glyphs fixture with all four languages:
 
 ```bash
-uv run python scripts/render_language_examples.py
+./scripts/render_language_examples.py
 ```
 
 The results are written below `output/languages/{rust,go,r,python}/`. Python
 uses the same `pycairo` dependency as `render_sbgn`; R uses the upstream base-R
 graphics implementation and therefore does not require the R Cairo package.
+
+![Original ER reference card and Rust, Go, R, and Python renders](output/comparisons/er_all_glyphs_languages.png)
 
 ## Verification
 
