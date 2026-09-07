@@ -1,0 +1,49 @@
+<?xml version='1.0' encoding='utf-8'?>
+<sbgn xmlns="http://sbgn.org/libsbgn/0.3">
+  <map id="upstream_entity_identity" language="entity relationship">
+    <glyph id="p" class="variable value">
+      <label text="P" />
+      <bbox x="30" y="25" w="50" h="34" />
+    </glyph>
+    <glyph id="camkii" class="entity">
+      <label text="CaMKII" />
+      <bbox x="15" y="145" w="170" h="75" />
+      <glyph id="t306" class="state variable">
+        <state variable="T306" />
+        <bbox x="65" y="133" w="70" h="24" />
+      </glyph>
+    </glyph>
+    <glyph id="p306" class="entity">
+      <label text="CaMKII P@T306" />
+      <bbox x="275" y="90" w="210" h="70" />
+    </glyph>
+    <glyph id="p286" class="entity">
+      <label text="CaMKII P@T286" />
+      <bbox x="275" y="205" w="210" h="70" />
+    </glyph>
+    <arc id="assignment" class="assignment" source="p" target="t306">
+      <glyph id="assigned" class="outcome">
+        <bbox x="78" y="92" w="16" h="16" />
+      </glyph>
+      <start x="55" y="59" />
+      <end x="100" y="133" />
+    </arc>
+    <arcgroup class="interaction">
+      <glyph id="identity_interaction" class="interaction">
+        <bbox x="220" y="157" w="36" h="36" />
+      </glyph>
+      <arc id="identity_source" class="interaction" source="camkii" target="identity_interaction">
+        <start x="185" y="182" />
+        <end x="220" y="175" />
+      </arc>
+      <arc id="identity_306" class="interaction" source="identity_interaction" target="p306">
+        <start x="256" y="175" />
+        <end x="275" y="125" />
+      </arc>
+      <arc id="identity_286" class="interaction" source="identity_interaction" target="p286">
+        <start x="256" y="175" />
+        <end x="275" y="240" />
+      </arc>
+    </arcgroup>
+  </map>
+</sbgn>

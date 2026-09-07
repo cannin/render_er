@@ -1,0 +1,73 @@
+<?xml version='1.0' encoding='utf-8'?>
+<sbgn xmlns="http://sbgn.org/libsbgn/0.3">
+  <map id="upstream_synchronous" language="entity relationship">
+    <glyph id="entity_c" class="entity">
+      <label text="C" />
+      <bbox x="230" y="20" w="180" h="80" />
+      <glyph id="existence_c" class="existence">
+        <bbox x="308" y="88" w="24" h="24" />
+      </glyph>
+    </glyph>
+    <glyph id="true_c" class="variable value">
+      <label text="T" />
+      <bbox x="285" y="150" w="70" h="34" />
+    </glyph>
+    <glyph id="entity_a" class="entity">
+      <label text="A" />
+      <bbox x="25" y="360" w="180" h="80" />
+      <glyph id="existence_a" class="existence">
+        <bbox x="103" y="348" w="24" h="24" />
+      </glyph>
+    </glyph>
+    <glyph id="false_a" class="variable value">
+      <label text="F" />
+      <bbox x="80" y="260" w="70" h="34" />
+    </glyph>
+    <glyph id="entity_b" class="entity">
+      <label text="B" />
+      <bbox x="435" y="360" w="180" h="80" />
+      <glyph id="existence_b" class="existence">
+        <bbox x="513" y="348" w="24" h="24" />
+      </glyph>
+    </glyph>
+    <glyph id="true_b" class="variable value">
+      <label text="T" />
+      <bbox x="490" y="260" w="70" h="34" />
+    </glyph>
+    <arc id="assignment_c" class="assignment" source="true_c" target="existence_c">
+      <glyph id="outcome_c" class="outcome">
+        <bbox x="312" y="124" w="16" h="16" />
+      </glyph>
+      <start x="320" y="150" />
+      <end x="320" y="112" />
+    </arc>
+    <arc id="assignment_a" class="assignment" source="false_a" target="existence_a">
+      <glyph id="outcome_a" class="outcome">
+        <bbox x="107" y="318" w="16" h="16" />
+      </glyph>
+      <port id="assignment_a_target" x="115" y="318" />
+      <start x="115" y="294" />
+      <end x="115" y="348" />
+    </arc>
+    <arc id="assignment_b" class="assignment" source="true_b" target="existence_b">
+      <glyph id="outcome_b" class="outcome">
+        <bbox x="517" y="318" w="16" h="16" />
+      </glyph>
+      <port id="assignment_b_target" x="525" y="318" />
+      <start x="525" y="294" />
+      <end x="525" y="348" />
+    </arc>
+    <arc id="stimulation_a" class="stimulation" source="outcome_c" target="assignment_a_target">
+      <start x="320" y="140" />
+      <next x="320" y="220" />
+      <next x="115" y="220" />
+      <end x="115" y="318" />
+    </arc>
+    <arc id="stimulation_b" class="stimulation" source="outcome_c" target="assignment_b_target">
+      <start x="320" y="140" />
+      <next x="320" y="220" />
+      <next x="525" y="220" />
+      <end x="525" y="318" />
+    </arc>
+  </map>
+</sbgn>

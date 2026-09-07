@@ -1,0 +1,25 @@
+<svg xmlns="http://www.w3.org/2000/svg" version="1.1" width="585.000px" height="290.000px" viewBox="0 0 585.000 290.000"><rect x="0" y="0" width="585.000" height="290.000" fill="#ffffff"/>
+<path d="M120.000 80.000L120.000 160.000" fill="none" stroke="#000000" stroke-width="1.250"/>
+<path d="M360.000 80.000L425.000 125.000L425.000 160.000" fill="none" stroke="#000000" stroke-width="1.250"/>
+<path d="M490.000 80.000L425.000 125.000L425.000 160.000" fill="none" stroke="#000000" stroke-width="1.250"/>
+<path d="M90.000 50.000L150.000 50.000Q165.000 50.000 165.000 65.000L165.000 65.000Q165.000 80.000 150.000 80.000L90.000 80.000Q75.000 80.000 75.000 65.000L75.000 65.000Q75.000 50.000 90.000 50.000Z" fill="#ffffff" stroke="#000000" stroke-width="1.250"/>
+<text x="120.000" y="65.000" text-anchor="middle" dominant-baseline="middle" font-family="Arial, 'Liberation Sans', Arimo, sans-serif" font-size="12.000" fill="#000000">value</text>
+<path d="M57.000 170.000L213.000 170.000Q220.000 170.000 220.000 177.000L220.000 233.000Q220.000 240.000 213.000 240.000L57.000 240.000Q50.000 240.000 50.000 233.000L50.000 177.000Q50.000 170.000 57.000 170.000Z" fill="#ffffff" stroke="#000000" stroke-width="1.250"/>
+<text x="135.000" y="205.000" text-anchor="middle" dominant-baseline="middle" font-family="Arial, 'Liberation Sans', Arimo, sans-serif" font-size="12.000" fill="#000000">Entity A</text>
+<path d="M110.000 160.000L160.000 160.000Q170.000 160.000 170.000 170.000L170.000 170.000Q170.000 180.000 160.000 180.000L110.000 180.000Q100.000 180.000 100.000 170.000L100.000 170.000Q100.000 160.000 110.000 160.000Z" fill="#ffffff" stroke="#000000" stroke-width="1.250"/>
+<text x="135.000" y="170.000" text-anchor="middle" dominant-baseline="middle" font-family="Arial, 'Liberation Sans', Arimo, sans-serif" font-size="8.000" fill="#000000">variable</text>
+<path d="M330.000 50.000L390.000 50.000Q405.000 50.000 405.000 65.000L405.000 65.000Q405.000 80.000 390.000 80.000L330.000 80.000Q315.000 80.000 315.000 65.000L315.000 65.000Q315.000 50.000 330.000 50.000Z" fill="#ffffff" stroke="#000000" stroke-width="1.250"/>
+<text x="360.000" y="65.000" text-anchor="middle" dominant-baseline="middle" font-family="Arial, 'Liberation Sans', Arimo, sans-serif" font-size="12.000" fill="#000000">value 1</text>
+<path d="M460.000 50.000L520.000 50.000Q535.000 50.000 535.000 65.000L535.000 65.000Q535.000 80.000 520.000 80.000L460.000 80.000Q445.000 80.000 445.000 65.000L445.000 65.000Q445.000 50.000 460.000 50.000Z" fill="#ffffff" stroke="#000000" stroke-width="1.250"/>
+<text x="490.000" y="65.000" text-anchor="middle" dominant-baseline="middle" font-family="Arial, 'Liberation Sans', Arimo, sans-serif" font-size="12.000" fill="#000000">value 2</text>
+<path d="M337.000 170.000L513.000 170.000Q520.000 170.000 520.000 177.000L520.000 233.000Q520.000 240.000 513.000 240.000L337.000 240.000Q330.000 240.000 330.000 233.000L330.000 177.000Q330.000 170.000 337.000 170.000Z" fill="#ffffff" stroke="#000000" stroke-width="1.250"/>
+<text x="425.000" y="205.000" text-anchor="middle" dominant-baseline="middle" font-family="Arial, 'Liberation Sans', Arimo, sans-serif" font-size="12.000" fill="#000000">Entity B</text>
+<path d="M400.000 160.000L450.000 160.000Q460.000 160.000 460.000 170.000L460.000 170.000Q460.000 180.000 450.000 180.000L400.000 180.000Q390.000 180.000 390.000 170.000L390.000 170.000Q390.000 160.000 400.000 160.000Z" fill="#ffffff" stroke="#000000" stroke-width="1.250"/>
+<text x="425.000" y="170.000" text-anchor="middle" dominant-baseline="middle" font-family="Arial, 'Liberation Sans', Arimo, sans-serif" font-size="8.000" fill="#000000">variable</text>
+<path d="M126.000 122.000Q126.000 124.485 124.243 126.243Q122.485 128.000 120.000 128.000Q117.515 128.000 115.757 126.243Q114.000 124.485 114.000 122.000Q114.000 119.515 115.757 117.757Q117.515 116.000 120.000 116.000Q122.485 116.000 124.243 117.757Q126.000 119.515 126.000 122.000Z" fill="#000000" stroke="#000000" stroke-width="1.250"/>
+<path d="M396.000 102.000Q396.000 104.485 394.243 106.243Q392.485 108.000 390.000 108.000Q387.515 108.000 385.757 106.243Q384.000 104.485 384.000 102.000Q384.000 99.515 385.757 97.757Q387.515 96.000 390.000 96.000Q392.485 96.000 394.243 97.757Q396.000 99.515 396.000 102.000Z" fill="#000000" stroke="#000000" stroke-width="1.250"/>
+<path d="M472.000 102.000Q472.000 104.485 470.243 106.243Q468.485 108.000 466.000 108.000Q463.515 108.000 461.757 106.243Q460.000 104.485 460.000 102.000Q460.000 99.515 461.757 97.757Q463.515 96.000 466.000 96.000Q468.485 96.000 470.243 97.757Q472.000 99.515 472.000 102.000Z" fill="#000000" stroke="#000000" stroke-width="1.250"/>
+<path d="M120.000 163.125L114.562 152.250L120.000 155.512L125.438 152.250Z" fill="#000000" stroke="#000000" stroke-width="1.000"/>
+<path d="M425.000 163.125L419.562 152.250L425.000 155.512L430.438 152.250Z" fill="#000000" stroke="#000000" stroke-width="1.000"/>
+<path d="M425.000 163.125L419.562 152.250L425.000 155.512L430.438 152.250Z" fill="#000000" stroke="#000000" stroke-width="1.000"/>
+</svg>

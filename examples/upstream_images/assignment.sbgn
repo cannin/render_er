@@ -1,0 +1,56 @@
+<?xml version='1.0' encoding='utf-8'?>
+<sbgn xmlns="http://sbgn.org/libsbgn/0.3">
+  <map id="upstream_assignment" language="entity relationship">
+    <glyph id="value" class="variable value">
+      <label text="value" />
+      <bbox x="45" y="25" w="90" h="30" />
+    </glyph>
+    <glyph id="entity_a" class="entity">
+      <label text="Entity A" />
+      <bbox x="20" y="145" w="170" h="70" />
+      <glyph id="variable_a" class="state variable">
+        <state variable="variable" />
+        <bbox x="70" y="135" w="70" h="20" />
+      </glyph>
+    </glyph>
+    <glyph id="value_1" class="variable value">
+      <label text="value 1" />
+      <bbox x="285" y="25" w="90" h="30" />
+    </glyph>
+    <glyph id="value_2" class="variable value">
+      <label text="value 2" />
+      <bbox x="415" y="25" w="90" h="30" />
+    </glyph>
+    <glyph id="entity_b" class="entity">
+      <label text="Entity B" />
+      <bbox x="300" y="145" w="190" h="70" />
+      <glyph id="variable_b" class="state variable">
+        <state variable="variable" />
+        <bbox x="360" y="135" w="70" h="20" />
+      </glyph>
+    </glyph>
+    <arc id="assignment_a" class="assignment" source="value" target="variable_a">
+      <glyph id="outcome_a" class="outcome">
+        <bbox x="84" y="91" w="12" h="12" />
+      </glyph>
+      <start x="90" y="55" />
+      <end x="90" y="135" />
+    </arc>
+    <arc id="assignment_b1" class="assignment" source="value_1" target="variable_b">
+      <glyph id="outcome_b1" class="outcome">
+        <bbox x="354" y="71" w="12" h="12" />
+      </glyph>
+      <start x="330" y="55" />
+      <next x="395" y="100" />
+      <end x="395" y="135" />
+    </arc>
+    <arc id="assignment_b2" class="assignment" source="value_2" target="variable_b">
+      <glyph id="outcome_b2" class="outcome">
+        <bbox x="430" y="71" w="12" h="12" />
+      </glyph>
+      <start x="460" y="55" />
+      <next x="395" y="100" />
+      <end x="395" y="135" />
+    </arc>
+  </map>
+</sbgn>

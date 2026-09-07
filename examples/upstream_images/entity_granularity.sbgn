@@ -1,0 +1,42 @@
+<?xml version='1.0' encoding='utf-8'?>
+<sbgn xmlns="http://sbgn.org/libsbgn/0.3">
+  <map id="upstream_entity_granularity" language="entity relationship">
+    <glyph id="phosphorylated" class="variable value">
+      <label text="P" />
+      <bbox x="65" y="25" w="50" h="34" />
+    </glyph>
+    <glyph id="camkii_state" class="entity">
+      <label text="CaMKII" />
+      <bbox x="20" y="145" w="180" h="75" />
+      <glyph id="t306" class="state variable">
+        <state variable="T306" />
+        <bbox x="75" y="133" w="70" h="24" />
+      </glyph>
+    </glyph>
+    <glyph id="true" class="variable value">
+      <label text="T" />
+      <bbox x="340" y="25" w="50" h="34" />
+    </glyph>
+    <glyph id="camkii_explicit" class="entity">
+      <label text="CaMKII P@T306" />
+      <bbox x="270" y="145" w="220" h="75" />
+      <glyph id="exists" class="existence">
+        <bbox x="368" y="133" w="24" h="24" />
+      </glyph>
+    </glyph>
+    <arc id="phosphorylation" class="assignment" source="phosphorylated" target="t306">
+      <glyph id="phosphorylation_outcome" class="outcome">
+        <bbox x="82" y="92" w="16" h="16" />
+      </glyph>
+      <start x="90" y="59" />
+      <end x="90" y="133" />
+    </arc>
+    <arc id="existence_assignment" class="assignment" source="true" target="exists">
+      <glyph id="existence_outcome" class="outcome">
+        <bbox x="372" y="92" w="16" h="16" />
+      </glyph>
+      <start x="365" y="59" />
+      <end x="380" y="133" />
+    </arc>
+  </map>
+</sbgn>

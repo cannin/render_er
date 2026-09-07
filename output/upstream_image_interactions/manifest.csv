@@ -1,0 +1,12 @@
+source,slug,title,fixture,source_url,semantic_nodes,relationships
+images/assignment.svg,assignment,Assignment alternatives,examples/upstream_images/assignment.sbgn,https://github.com/sbgn/entity-relationships/blob/master/images/assignment.svg,5,3
+images/asynchronous.svg,asynchronous,Independent consequences,examples/upstream_images/asynchronous.sbgn,https://github.com/sbgn/entity-relationships/blob/master/images/asynchronous.svg,6,5
+images/entity-granularity.svg,entity_granularity,Entity granularity,examples/upstream_images/entity_granularity.sbgn,https://github.com/sbgn/entity-relationships/blob/master/images/entity-granularity.svg,4,2
+images/entity-identity.svg,entity_identity,Entity identity,examples/upstream_images/entity_identity.sbgn,https://github.com/sbgn/entity-relationships/blob/master/images/entity-identity.svg,5,4
+images/interaction.svg,interaction,Binary and n-ary interactions,examples/upstream_images/interaction.sbgn,https://github.com/sbgn/entity-relationships/blob/master/images/interaction.svg,10,7
+images/logicArc.svg,logic_arc,Logic arc,examples/upstream_images/logic_arc.sbgn,https://github.com/sbgn/entity-relationships/blob/master/images/logicArc.svg,2,1
+images/nesting-existence.svg,nesting_existence,Nested entity existence semantics,examples/upstream_images/nesting_existence.sbgn,https://github.com/sbgn/entity-relationships/blob/master/images/nesting-existence.svg,8,2
+images/nesting-location.svg,nesting_location,Nested entity location semantics,examples/upstream_images/nesting_location.sbgn,https://github.com/sbgn/entity-relationships/blob/master/images/nesting-location.svg,8,2
+images/refcard.svg,refcard,Appendix B reference card,examples/upstream_images/refcard.sbgn,https://github.com/sbgn/entity-relationships/blob/master/images/refcard.svg,36,12
+images/simultaneous.svg,simultaneous,Multiple simultaneous consequences,examples/upstream_images/simultaneous.sbgn,https://github.com/sbgn/entity-relationships/blob/master/images/simultaneous.svg,5,4
+images/synchronous.svg,synchronous,Synchronous consequences,examples/upstream_images/synchronous.sbgn,https://github.com/sbgn/entity-relationships/blob/master/images/synchronous.svg,6,5

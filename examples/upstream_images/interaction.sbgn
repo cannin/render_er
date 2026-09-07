@@ -1,0 +1,97 @@
+<?xml version='1.0' encoding='utf-8'?>
+<sbgn xmlns="http://sbgn.org/libsbgn/0.3">
+  <map id="upstream_interaction" language="entity relationship">
+    <glyph id="binary_a" class="entity">
+      <label text="A" />
+      <bbox x="20" y="35" w="120" h="55" />
+    </glyph>
+    <glyph id="binary_b" class="entity">
+      <label text="B" />
+      <bbox x="285" y="35" w="120" h="55" />
+    </glyph>
+    <glyph id="cis_a" class="entity">
+      <label text="A" />
+      <bbox x="520" y="35" w="120" h="55" />
+    </glyph>
+    <glyph id="cardinality_a" class="entity">
+      <label text="A" />
+      <bbox x="20" y="250" w="120" h="55" />
+    </glyph>
+    <glyph id="cardinality_b" class="entity">
+      <label text="B" />
+      <bbox x="285" y="250" w="120" h="55" />
+    </glyph>
+    <glyph id="nary_a" class="entity">
+      <label text="A" />
+      <bbox x="520" y="220" w="120" h="55" />
+    </glyph>
+    <glyph id="nary_b" class="entity">
+      <label text="B" />
+      <bbox x="520" y="310" w="120" h="55" />
+    </glyph>
+    <glyph id="nary_c" class="entity">
+      <label text="C" />
+      <bbox x="760" y="265" w="120" h="55" />
+    </glyph>
+    <arc id="binary" class="interaction" source="binary_a" target="binary_b">
+      <glyph id="binary_outcome" class="outcome">
+        <bbox x="205" y="54.5" w="16" h="16" />
+      </glyph>
+      <start x="140" y="62.5" />
+      <end x="285" y="62.5" />
+    </arc>
+    <arc id="cis" class="interaction" source="cis_a" target="cis_a">
+      <glyph id="cis_outcome" class="outcome">
+        <bbox x="572" y="127" w="16" h="16" />
+      </glyph>
+      <glyph id="cis_label" class="cardinality">
+        <label text="cis" />
+        <bbox x="570" y="102" w="40" h="18" />
+      </glyph>
+      <start x="550" y="90" />
+      <next x="550" y="135" />
+      <next x="610" y="135" />
+      <end x="610" y="90" />
+    </arc>
+    <arcgroup class="interaction">
+      <glyph id="cardinality_interaction" class="interaction">
+        <bbox x="195" y="257.5" w="40" h="40" />
+      </glyph>
+      <arc id="cardinality_left" class="interaction" source="cardinality_a" target="cardinality_interaction">
+        <glyph id="cardinality" class="cardinality">
+          <label text="2" />
+          <bbox x="155" y="254" w="24" h="18" />
+        </glyph>
+        <start x="140" y="277.5" />
+        <end x="195" y="277.5" />
+      </arc>
+      <arc id="cardinality_right" class="interaction" source="cardinality_interaction" target="cardinality_b">
+        <glyph id="cardinality_outcome" class="outcome">
+          <bbox x="247" y="269.5" w="16" h="16" />
+        </glyph>
+        <start x="235" y="277.5" />
+        <end x="285" y="277.5" />
+      </arc>
+    </arcgroup>
+    <arcgroup class="interaction">
+      <glyph id="nary_interaction" class="interaction">
+        <bbox x="685" y="262.5" w="40" h="40" />
+      </glyph>
+      <arc id="nary_a_arc" class="interaction" source="nary_a" target="nary_interaction">
+        <start x="640" y="247.5" />
+        <end x="685" y="272.5" />
+      </arc>
+      <arc id="nary_b_arc" class="interaction" source="nary_b" target="nary_interaction">
+        <start x="640" y="337.5" />
+        <end x="685" y="292.5" />
+      </arc>
+      <arc id="nary_c_arc" class="interaction" source="nary_interaction" target="nary_c">
+        <glyph id="nary_outcome" class="outcome">
+          <bbox x="738" y="274.5" w="16" h="16" />
+        </glyph>
+        <start x="725" y="282.5" />
+        <end x="760" y="292.5" />
+      </arc>
+    </arcgroup>
+  </map>
+</sbgn>

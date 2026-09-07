@@ -119,6 +119,12 @@ graphics implementation and therefore does not require the R Cairo package.
 
 ![Original ER reference card and Rust, Go, R, and Python renders](output/comparisons/er_all_glyphs_languages.png)
 
+Connected diagrams reconstructed from the specification's upstream `images/`
+directory are available in the
+[four-language comparison gallery](output/upstream_image_interactions/index.html).
+The selection criteria and exclusions are documented in
+[`docs/upstream_image_interactions.md`](docs/upstream_image_interactions.md).
+
 ## Verification
 
 ```bash

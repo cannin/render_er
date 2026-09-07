@@ -1,0 +1,241 @@
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<sbgn xmlns="http://sbgn.org/libsbgn/0.3">
+  <map id="er_all_glyphs.sbgn" language="entity relationship">
+    <!-- Interactors and entity nesting. -->
+    <glyph id="entity_basic" class="entity">
+      <label text="Entity"/>
+      <bbox x="50" y="60" w="150" h="60"/>
+    </glyph>
+    <glyph id="entity_nested" class="entity">
+      <label text="Outer entity"/>
+      <bbox x="50" y="170" w="350" h="120"/>
+      <glyph id="entity_nested_child" class="entity">
+        <label text="Nested entity"/>
+        <bbox x="70" y="205" w="120" h="55"/>
+      </glyph>
+    </glyph>
+    <glyph id="perturbing_agent" class="perturbing agent">
+      <label text="Perturbing agent"/>
+      <bbox x="70" y="330" w="170" h="70"/>
+    </glyph>
+    <glyph id="interaction_entity_a" class="entity">
+      <label text="Entity A"/>
+      <bbox x="40" y="470" w="120" h="50"/>
+    </glyph>
+    <glyph id="interaction_entity_b" class="entity">
+      <label text="Entity B"/>
+      <bbox x="260" y="470" w="120" h="50"/>
+    </glyph>
+    <!-- Auxiliary units. -->
+    <glyph id="entity_information" class="entity">
+      <label text="Unit of information"/>
+      <bbox x="430" y="70" w="190" h="60"/>
+      <glyph id="information_unit" class="unit of information">
+        <label text="pre:label"/>
+        <bbox x="455" y="60" w="80" h="20"/>
+      </glyph>
+    </glyph>
+    <glyph id="entity_state" class="entity">
+      <label text="State variable"/>
+      <bbox x="430" y="180" w="190" h="60"/>
+      <glyph id="state_variable" class="state variable">
+        <state variable="variable" value="value"/>
+        <bbox x="455" y="170" w="95" h="20"/>
+      </glyph>
+    </glyph>
+    <glyph id="entity_existence" class="entity">
+      <label text="Existence"/>
+      <bbox x="430" y="290" w="190" h="60"/>
+      <glyph id="existence" class="existence">
+        <bbox x="455" y="278" w="24" h="24"/>
+      </glyph>
+    </glyph>
+    <glyph id="entity_location" class="entity">
+      <label text="Location"/>
+      <bbox x="430" y="400" w="190" h="60"/>
+      <glyph id="location" class="location">
+        <bbox x="455" y="388" w="24" h="24"/>
+      </glyph>
+    </glyph>
+    <glyph id="variable_value" class="variable value">
+      <label text="Variable value"/>
+      <bbox x="465" y="510" w="120" h="34"/>
+    </glyph>
+
+    <!-- Logical operators. -->
+    <glyph id="logic_and" class="and">
+      <bbox x="665" y="70" w="50" h="50"/>
+    </glyph>
+    <glyph id="logic_or" class="or">
+      <bbox x="665" y="170" w="50" h="50"/>
+    </glyph>
+    <glyph id="logic_not" class="not">
+      <bbox x="665" y="270" w="50" h="50"/>
+    </glyph>
+    <glyph id="logic_delay" class="delay">
+      <bbox x="665" y="370" w="50" h="50"/>
+    </glyph>
+    <glyph id="logic_target" class="phenotype">
+      <label text="Logic target"/>
+      <bbox x="770" y="365" w="120" h="60"/>
+    </glyph>
+    <!-- Assignment statement with a barbed arrowhead and an outcome. -->
+    <glyph id="assignment_value" class="variable value">
+      <label text="assigned value"/>
+      <bbox x="810" y="70" w="120" h="34"/>
+    </glyph>
+    <glyph id="assignment_entity" class="entity">
+      <label text="Assignment target"/>
+      <bbox x="785" y="180" w="170" h="60"/>
+      <glyph id="assignment_state" class="state variable">
+        <state variable="state"/>
+        <bbox x="830" y="170" w="80" h="20"/>
+      </glyph>
+    </glyph>
+    <!-- N-ary interaction statement and cardinality decoration. -->
+    <glyph id="interaction_a" class="entity">
+      <label text="Interactor A"/>
+      <bbox x="790" y="285" w="120" h="45"/>
+    </glyph>
+    <glyph id="interaction_b" class="entity">
+      <label text="Interactor B"/>
+      <bbox x="790" y="455" w="120" h="45"/>
+    </glyph>
+    <glyph id="interaction_result" class="entity">
+      <label text="Interactor C"/>
+      <bbox x="1050" y="360" w="120" h="50"/>
+    </glyph>
+    <glyph id="phenotype" class="phenotype">
+      <label text="Phenotype"/>
+      <bbox x="830" y="545" w="140" h="65"/>
+    </glyph>
+
+    <!-- Every influence arc class from the Level 1 reference card. -->
+    <glyph id="modulation_source" class="entity">
+      <label text="Modulation"/>
+      <bbox x="1210" y="60" w="120" h="50"/>
+    </glyph>
+    <glyph id="modulation_target" class="phenotype">
+      <label text="Target"/>
+      <bbox x="1450" y="60" w="120" h="50"/>
+    </glyph>
+    <glyph id="stimulation_source" class="entity">
+      <label text="Stimulation"/>
+      <bbox x="1210" y="150" w="120" h="50"/>
+    </glyph>
+    <glyph id="stimulation_target" class="phenotype">
+      <label text="Target"/>
+      <bbox x="1450" y="150" w="120" h="50"/>
+    </glyph>
+    <glyph id="necessary_source" class="entity">
+      <label text="Necessary stimulation"/>
+      <bbox x="1210" y="240" w="120" h="50"/>
+    </glyph>
+    <glyph id="necessary_target" class="phenotype">
+      <label text="Target"/>
+      <bbox x="1450" y="240" w="120" h="50"/>
+    </glyph>
+    <glyph id="absolute_stimulation_source" class="entity">
+      <label text="Absolute stimulation"/>
+      <bbox x="1210" y="330" w="120" h="50"/>
+    </glyph>
+    <glyph id="absolute_stimulation_target" class="phenotype">
+      <label text="Target"/>
+      <bbox x="1450" y="330" w="120" h="50"/>
+    </glyph>
+    <glyph id="inhibition_source" class="entity">
+      <label text="Inhibition"/>
+      <bbox x="1210" y="420" w="120" h="50"/>
+    </glyph>
+    <glyph id="inhibition_target" class="phenotype">
+      <label text="Target"/>
+      <bbox x="1450" y="420" w="120" h="50"/>
+    </glyph>
+    <glyph id="absolute_inhibition_source" class="entity">
+      <label text="Absolute inhibition"/>
+      <bbox x="1210" y="510" w="120" h="50"/>
+    </glyph>
+    <glyph id="absolute_inhibition_target" class="phenotype">
+      <label text="Target"/>
+      <bbox x="1450" y="510" w="120" h="50"/>
+    </glyph>
+    <!-- Reference node. -->
+    <glyph id="annotation" class="annotation">
+      <label text="Annotation"/>
+      <callout target="phenotype">
+        <point x="1010" y="755"/>
+      </callout>
+      <bbox x="790" y="665" w="180" h="75"/>
+    </glyph>
+
+    <!-- Relationships follow all top-level glyphs, as required by SBGN-ML. -->
+    <arc id="binary_interaction" class="interaction" source="interaction_entity_a" target="interaction_entity_b">
+      <glyph id="interaction_outcome" class="outcome">
+        <bbox x="200" y="485" w="20" h="20"/>
+      </glyph>
+      <start x="160" y="495"/>
+      <end x="260" y="495"/>
+    </arc>
+    <arc id="logic_arc" class="logic arc" source="logic_delay" target="logic_target">
+      <start x="715" y="395"/>
+      <end x="770" y="395"/>
+    </arc>
+    <arc id="assignment" class="assignment" source="assignment_value" target="assignment_state">
+      <glyph id="assignment_outcome" class="outcome">
+        <bbox x="860" y="132" w="20" h="20"/>
+      </glyph>
+      <start x="870" y="104"/>
+      <end x="870" y="170"/>
+    </arc>
+    <arc id="modulation" class="modulation" source="modulation_source" target="modulation_target">
+      <start x="1330" y="85"/>
+      <end x="1450" y="85"/>
+    </arc>
+    <arc id="stimulation" class="stimulation" source="stimulation_source" target="stimulation_target">
+      <start x="1330" y="175"/>
+      <end x="1450" y="175"/>
+    </arc>
+    <arc id="necessary_stimulation" class="necessary stimulation" source="necessary_source" target="necessary_target">
+      <start x="1330" y="265"/>
+      <end x="1450" y="265"/>
+    </arc>
+    <arc id="absolute_stimulation" class="absolute stimulation" source="absolute_stimulation_source" target="absolute_stimulation_target">
+      <start x="1330" y="355"/>
+      <end x="1450" y="355"/>
+    </arc>
+    <arc id="inhibition" class="inhibition" source="inhibition_source" target="inhibition_target">
+      <start x="1330" y="445"/>
+      <end x="1450" y="445"/>
+    </arc>
+    <arc id="absolute_inhibition" class="absolute inhibition" source="absolute_inhibition_source" target="absolute_inhibition_target">
+      <start x="1330" y="535"/>
+      <end x="1450" y="535"/>
+    </arc>
+
+    <!-- N-ary interactions are represented by an interaction arc group. -->
+    <arcgroup class="interaction">
+      <glyph id="interaction_node" class="interaction">
+        <bbox x="955" y="365" w="40" h="40"/>
+      </glyph>
+      <arc id="interaction_input_a" class="interaction" source="interaction_a" target="interaction_node">
+        <start x="910" y="307.5"/>
+        <end x="965" y="365"/>
+      </arc>
+      <arc id="interaction_input_b" class="interaction" source="interaction_b" target="interaction_node">
+        <start x="910" y="477.5"/>
+        <end x="965" y="405"/>
+      </arc>
+      <arc id="interaction_output" class="interaction" source="interaction_node" target="interaction_result">
+        <glyph id="interaction_cardinality" class="cardinality">
+          <label text="N"/>
+          <bbox x="1010" y="376" w="22" h="18"/>
+        </glyph>
+        <glyph id="nary_interaction_outcome" class="outcome">
+          <bbox x="1026" y="377" w="16" h="16"/>
+        </glyph>
+        <start x="995" y="385"/>
+        <end x="1050" y="385"/>
+      </arc>
+    </arcgroup>
+  </map>
+</sbgn>

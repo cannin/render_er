@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" version="1.1" width="470.000px" height="175.000px" viewBox="0 0 470.000 175.000"><rect x="0" y="0" width="470.000" height="175.000" fill="#ffffff"/>
+<path d="M220.000 87.500L360.000 87.500" fill="none" stroke="#000000" stroke-width="1.250"/>
+<path d="M57.500 50.000L212.500 50.000Q220.000 50.000 220.000 57.500L220.000 117.500Q220.000 125.000 212.500 125.000L57.500 125.000Q50.000 125.000 50.000 117.500L50.000 57.500Q50.000 50.000 57.500 50.000Z" fill="#ffffff" stroke="#000000" stroke-width="1.250"/>
+<text x="135.000" y="87.500" text-anchor="middle" dominant-baseline="middle" font-family="Arial, 'Liberation Sans', Arimo, sans-serif" font-size="12.000" fill="#000000">Origin EN</text>
+<path d="M420.000 87.500Q420.000 93.467 417.716 98.980Q415.433 104.494 411.213 108.713Q406.994 112.933 401.480 115.216Q395.967 117.500 390.000 117.500Q384.033 117.500 378.519 115.216Q373.006 112.933 368.787 108.713Q364.567 104.494 362.284 98.980Q360.000 93.467 360.000 87.500Q360.000 81.533 362.284 76.019Q364.567 70.506 368.787 66.287Q373.006 62.067 378.519 59.784Q384.033 57.500 390.000 57.500Q395.967 57.500 401.480 59.784Q406.994 62.067 411.213 66.287Q415.433 70.506 417.716 76.019Q420.000 81.533 420.000 87.500Z" fill="#ffffff" stroke="#000000" stroke-width="1.250"/>
+<text x="390.000" y="87.500" text-anchor="middle" dominant-baseline="middle" font-family="Arial, 'Liberation Sans', Arimo, sans-serif" font-size="12.000" fill="#000000">AND</text>
+</svg>

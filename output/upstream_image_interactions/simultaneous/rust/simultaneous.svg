@@ -1,0 +1,24 @@
+<svg xmlns="http://www.w3.org/2000/svg" version="1.1" width="610.000px" height="545.000px" viewBox="0 0 610.000 545.000"><rect x="0" y="0" width="610.000" height="545.000" fill="#ffffff"/>
+<path d="M305.000 185.000L305.000 142.000" fill="none" stroke="#000000" stroke-width="1.250"/>
+<path d="M305.000 172.000L305.000 290.000L125.000 340.000L125.000 395.000" fill="none" stroke="#000000" stroke-width="1.250"/>
+<path d="M305.000 172.000L305.000 290.000L305.000 340.000L305.000 435.000" fill="none" stroke="#000000" stroke-width="1.250"/>
+<path d="M305.000 172.000L305.000 290.000L485.000 340.000L485.000 395.000" fill="none" stroke="#000000" stroke-width="1.250"/>
+<path d="M223.000 50.000L387.000 50.000Q395.000 50.000 395.000 58.000L395.000 122.000Q395.000 130.000 387.000 130.000L223.000 130.000Q215.000 130.000 215.000 122.000L215.000 58.000Q215.000 50.000 223.000 50.000Z" fill="#ffffff" stroke="#000000" stroke-width="1.250"/>
+<text x="305.000" y="90.000" text-anchor="middle" dominant-baseline="middle" font-family="Arial, 'Liberation Sans', Arimo, sans-serif" font-size="12.000" fill="#000000">Entity</text>
+<path d="M305.000 118.000L305.000 118.000Q317.000 118.000 317.000 130.000L317.000 130.000Q317.000 142.000 305.000 142.000L305.000 142.000Q293.000 142.000 293.000 130.000L293.000 130.000Q293.000 118.000 305.000 118.000Z" fill="#ffffff" stroke="#000000" stroke-width="1.250"/>
+<text x="305.000" y="130.000" text-anchor="middle" dominant-baseline="middle" font-family="Arial, 'Liberation Sans', Arimo, sans-serif" font-size="8.000" fill="#000000">state</text>
+<path d="M287.000 185.000L323.000 185.000Q340.000 185.000 340.000 202.000L340.000 202.000Q340.000 219.000 323.000 219.000L287.000 219.000Q270.000 219.000 270.000 202.000L270.000 202.000Q270.000 185.000 287.000 185.000Z" fill="#ffffff" stroke="#000000" stroke-width="1.250"/>
+<text x="305.000" y="202.000" text-anchor="middle" dominant-baseline="middle" font-family="Arial, 'Liberation Sans', Arimo, sans-serif" font-size="12.000" fill="#000000">value</text>
+<path d="M50.000 425.000L87.500 395.000L162.500 395.000L200.000 425.000L162.500 455.000L87.500 455.000Z" fill="#ffffff" stroke="#000000" stroke-width="1.250"/>
+<text x="125.000" y="425.000" text-anchor="middle" dominant-baseline="middle" font-family="Arial, 'Liberation Sans', Arimo, sans-serif" font-size="12.000" fill="#000000">Outcome A</text>
+<path d="M230.000 465.000L267.500 435.000L342.500 435.000L380.000 465.000L342.500 495.000L267.500 495.000Z" fill="#ffffff" stroke="#000000" stroke-width="1.250"/>
+<text x="305.000" y="465.000" text-anchor="middle" dominant-baseline="middle" font-family="Arial, 'Liberation Sans', Arimo, sans-serif" font-size="12.000" fill="#000000">Outcome B</text>
+<path d="M410.000 425.000L447.500 395.000L522.500 395.000L560.000 425.000L522.500 455.000L447.500 455.000Z" fill="#ffffff" stroke="#000000" stroke-width="1.250"/>
+<text x="485.000" y="425.000" text-anchor="middle" dominant-baseline="middle" font-family="Arial, 'Liberation Sans', Arimo, sans-serif" font-size="12.000" fill="#000000">Outcome C</text>
+<path d="M313.000 164.000Q313.000 167.314 310.657 169.657Q308.314 172.000 305.000 172.000Q301.686 172.000 299.343 169.657Q297.000 167.314 297.000 164.000Q297.000 160.686 299.343 158.343Q301.686 156.000 305.000 156.000Q308.314 156.000 310.657 158.343Q313.000 160.686 313.000 164.000Z" fill="#000000" stroke="#000000" stroke-width="1.250"/>
+<path d="M305.000 138.875L310.438 149.750L305.000 146.488L299.562 149.750Z" fill="#000000" stroke="#000000" stroke-width="1.000"/>
+<path d="M119.562 387.250L125.000 398.125L130.438 387.250Z" fill="#ffffff" stroke="#000000" stroke-width="1.000"/>
+<path d="M130.438 384.350L119.562 384.350" fill="none" stroke="#000000" stroke-width="1.250"/>
+<path d="M299.562 427.250L305.000 438.125L310.438 427.250Z" fill="#ffffff" stroke="#000000" stroke-width="1.000"/>
+<path d="M490.438 395.000L479.562 395.000" fill="none" stroke="#000000" stroke-width="1.250"/>
+</svg>

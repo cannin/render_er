@@ -1,0 +1,62 @@
+<?xml version='1.0' encoding='utf-8'?>
+<sbgn xmlns="http://sbgn.org/libsbgn/0.3">
+  <map id="upstream_nesting_location" language="entity relationship">
+    <glyph id="left_x" class="entity">
+      <label text="X" />
+      <bbox x="20" y="170" w="310" h="135" />
+      <glyph id="left_a" class="entity">
+        <label text="A" />
+        <bbox x="40" y="220" w="120" h="60" />
+        <glyph id="left_variable_a" class="location">
+          <bbox x="88" y="208" w="24" h="24" />
+        </glyph>
+      </glyph>
+      <glyph id="left_b" class="entity">
+        <label text="B" />
+        <bbox x="190" y="220" w="120" h="60" />
+      </glyph>
+    </glyph>
+    <glyph id="left_value" class="variable value">
+      <label text="C" />
+      <bbox x="140" y="55" w="70" h="34" />
+    </glyph>
+    <glyph id="right_x" class="entity">
+      <label text="X" />
+      <bbox x="390" y="170" w="310" h="135" />
+      <glyph id="right_a" class="entity">
+        <label text="A" />
+        <bbox x="410" y="220" w="120" h="60" />
+        <glyph id="right_variable_a" class="location">
+          <bbox x="458" y="208" w="24" h="24" />
+        </glyph>
+      </glyph>
+      <glyph id="right_b" class="entity">
+        <label text="B" />
+        <bbox x="560" y="220" w="120" h="60" />
+      </glyph>
+      <glyph id="right_variable_x" class="location">
+        <bbox x="533" y="158" w="24" h="24" />
+      </glyph>
+    </glyph>
+    <glyph id="right_value" class="variable value">
+      <label text="C" />
+      <bbox x="510" y="55" w="70" h="34" />
+    </glyph>
+    <arc id="left_assignment" class="assignment" source="left_value" target="left_variable_a">
+      <glyph id="left_outcome" class="outcome">
+        <bbox x="167" y="119" w="16" h="16" />
+      </glyph>
+      <start x="175" y="89" />
+      <next x="175" y="135" />
+      <end x="100" y="208" />
+    </arc>
+    <arc id="right_assignment" class="assignment" source="right_value" target="right_variable_x">
+      <glyph id="right_outcome" class="outcome">
+        <bbox x="537" y="119" w="16" h="16" />
+      </glyph>
+      <start x="545" y="89" />
+      <next x="545" y="135" />
+      <end x="545" y="182" />
+    </arc>
+  </map>
+</sbgn>

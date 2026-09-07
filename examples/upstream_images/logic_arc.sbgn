@@ -1,0 +1,16 @@
+<?xml version='1.0' encoding='utf-8'?>
+<sbgn xmlns="http://sbgn.org/libsbgn/0.3">
+  <map id="upstream_logic_arc" language="entity relationship">
+    <glyph id="origin" class="entity">
+      <label text="Origin EN" />
+      <bbox x="20" y="45" w="170" h="75" />
+    </glyph>
+    <glyph id="operator" class="and">
+      <bbox x="330" y="52.5" w="60" h="60" />
+    </glyph>
+    <arc id="logic_arc" class="logic arc" source="origin" target="operator">
+      <start x="190" y="82.5" />
+      <end x="330" y="82.5" />
+    </arc>
+  </map>
+</sbgn>
