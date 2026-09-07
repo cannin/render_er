@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" version="1.1" width="360.000px" height="230.000px" viewBox="0 0 360.000 230.000"><rect x="0" y="0" width="360.000" height="230.000" fill="#ffffff"/>
+<path d="M63.000 50.000L297.000 50.000Q310.000 50.000 310.000 63.000L310.000 167.000Q310.000 180.000 297.000 180.000L63.000 180.000Q50.000 180.000 50.000 167.000L50.000 63.000Q50.000 50.000 63.000 50.000Z" fill="#ffffff" stroke="#000000" stroke-width="1.250"/>
+<text x="180.000" y="115.000" text-anchor="middle" dominant-baseline="middle" font-family="Arial, 'Liberation Sans', Arimo, sans-serif" font-size="12.000" fill="#000000">complex</text>
+<path d="M76.000 85.000L174.000 85.000Q180.000 85.000 180.000 91.000L180.000 139.000Q180.000 145.000 174.000 145.000L76.000 145.000Q70.000 145.000 70.000 139.000L70.000 91.000Q70.000 85.000 76.000 85.000Z" fill="#ffffff" stroke="#000000" stroke-width="1.250"/>
+<text x="125.000" y="115.000" text-anchor="middle" dominant-baseline="middle" font-family="Arial, 'Liberation Sans', Arimo, sans-serif" font-size="12.000" fill="#000000">subunit</text>
+<path d="M98.000 76.000L152.000 76.000L152.000 94.000L98.000 94.000Z" fill="#ffffff" stroke="#000000" stroke-width="1.250"/>
+<text x="125.000" y="85.000" text-anchor="middle" dominant-baseline="middle" font-family="Arial, 'Liberation Sans', Arimo, sans-serif" font-size="8.000" fill="#000000">mt:prot</text>
+</svg>

@@ -1,0 +1,41 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<sbgn xmlns="http://sbgn.org/libsbgn/0.3">
+  <map language="entity relationship" id="figure_1_1">
+    <glyph id="entity_a" class="entity">
+      <label text="entity A"/>
+      <bbox x="90" y="150" w="120" h="60"/>
+      <glyph id="var_a" class="state variable">
+        <state variable="var"/>
+        <bbox x="125" y="141" w="50" h="18"/>
+      </glyph>
+    </glyph>
+    <glyph id="value_1" class="variable value">
+      <label text="value 1"/>
+      <bbox x="119" y="35" w="62" h="22"/>
+    </glyph>
+    <glyph id="entity_b" class="entity">
+      <label text="entity B"/>
+      <bbox x="390" y="150" w="120" h="60"/>
+    </glyph>
+    <arc id="assignment" class="assignment" source="value_1" target="var_a">
+      <glyph id="assignment_outcome" class="outcome">
+        <bbox x="144" y="91" w="12" h="12"/>
+      </glyph>
+      <start x="150" y="57"/>
+      <end x="150" y="141"/>
+    </arc>
+    <arc id="interaction" class="interaction" source="entity_a" target="entity_b">
+      <glyph id="interaction_outcome" class="outcome">
+        <bbox x="294" y="174" w="12" h="12"/>
+      </glyph>
+      <port id="interaction_target" x="300" y="180"/>
+      <start x="210" y="180"/>
+      <end x="390" y="180"/>
+    </arc>
+    <arc id="stimulation" class="stimulation" source="assignment_outcome" target="interaction_target">
+      <start x="156" y="97"/>
+      <next x="300" y="97"/>
+      <end x="300" y="180"/>
+    </arc>
+  </map>
+</sbgn>

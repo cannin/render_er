@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<sbgn xmlns="http://sbgn.org/libsbgn/0.3">
+  <map language="entity relationship" id="nested_entity">
+    <glyph id="complex_entity" class="entity">
+      <label text="complex"/>
+      <bbox x="40" y="40" w="260" h="130"/>
+      <glyph id="subunit" class="entity">
+        <label text="subunit"/>
+        <bbox x="60" y="75" w="110" h="60"/>
+        <glyph id="subunit_type" class="unit of information">
+          <label text="mt:prot"/>
+          <bbox x="88" y="66" w="54" h="18"/>
+        </glyph>
+      </glyph>
+    </glyph>
+  </map>
+</sbgn>

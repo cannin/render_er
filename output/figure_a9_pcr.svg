@@ -1,0 +1,91 @@
+<svg xmlns="http://www.w3.org/2000/svg" version="1.1" width="648.000px" height="590.000px" viewBox="0 0 648.000 590.000"><rect x="0" y="0" width="648.000" height="590.000" fill="#ffffff"/>
+<path d="M228.000 210.000L420.000 210.000" fill="none" stroke="#000000" stroke-width="1.250"/>
+<path d="M174.000 480.000L174.000 240.000" fill="none" stroke="#000000" stroke-width="1.250"/>
+<path d="M474.000 480.000L474.000 240.000" fill="none" stroke="#000000" stroke-width="1.250"/>
+<path d="M198.750 320.000L201.000 245.000" fill="none" stroke="#000000" stroke-width="1.250"/>
+<path d="M449.250 320.000L447.000 245.000" fill="none" stroke="#000000" stroke-width="1.250"/>
+<path d="M324.000 110.000L324.000 210.000" fill="none" stroke="#000000" stroke-width="1.250"/>
+<path d="M324.000 295.000L324.000 210.000" fill="none" stroke="#000000" stroke-width="1.250"/>
+<path d="M337.500 110.000L338.000 130.000L584.000 130.000L584.000 330.000L474.000 330.000" fill="none" stroke="#000000" stroke-width="1.250"/>
+<path d="M364.000 204.000L364.000 140.000L574.000 140.000L574.000 290.000L474.000 290.000" fill="none" stroke="#000000" stroke-width="1.250"/>
+<path d="M468.000 410.000L244.000 410.000L244.000 290.000L201.000 290.000" fill="none" stroke="#000000" stroke-width="1.250"/>
+<path d="M180.000 430.000L404.000 430.000L404.000 290.000L447.000 290.000" fill="none" stroke="#000000" stroke-width="1.250"/>
+<path d="M310.500 110.000L310.000 130.000L64.000 130.000L64.000 330.000L174.000 330.000" fill="none" stroke="#000000" stroke-width="1.250"/>
+<path d="M284.000 204.000L284.000 140.000L74.000 140.000L74.000 290.000L174.000 290.000" fill="none" stroke="#000000" stroke-width="1.250"/>
+<path d="M180.000 379.960L324.000 379.000" fill="none" stroke="#000000" stroke-width="1.250"/>
+<path d="M468.000 379.960L324.000 379.000" fill="none" stroke="#000000" stroke-width="1.250"/>
+<path d="M126.000 480.000L222.000 480.000Q228.000 480.000 228.000 486.000L228.000 534.000Q228.000 540.000 222.000 540.000L126.000 540.000Q120.000 540.000 120.000 534.000L120.000 486.000Q120.000 480.000 126.000 480.000Z" fill="#ffffff" stroke="#000000" stroke-width="1.250"/>
+<text x="174.000" y="510.000" text-anchor="middle" dominant-baseline="middle" font-family="Arial, 'Liberation Sans', Arimo, sans-serif" font-size="12.000" fill="#000000">3' primer</text>
+<path d="M150.500 531.500L197.500 531.500L197.500 548.500L150.500 548.500Z" fill="#ffffff" stroke="#000000" stroke-width="1.250"/>
+<text x="174.000" y="540.000" text-anchor="middle" dominant-baseline="middle" font-family="Arial, 'Liberation Sans', Arimo, sans-serif" font-size="8.000" fill="#000000">mt:dna</text>
+<path d="M426.000 480.000L522.000 480.000Q528.000 480.000 528.000 486.000L528.000 534.000Q528.000 540.000 522.000 540.000L426.000 540.000Q420.000 540.000 420.000 534.000L420.000 486.000Q420.000 480.000 426.000 480.000Z" fill="#ffffff" stroke="#000000" stroke-width="1.250"/>
+<text x="474.000" y="510.000" text-anchor="middle" dominant-baseline="middle" font-family="Arial, 'Liberation Sans', Arimo, sans-serif" font-size="12.000" fill="#000000">5' primer</text>
+<path d="M450.500 531.500L497.500 531.500L497.500 548.500L450.500 548.500Z" fill="#ffffff" stroke="#000000" stroke-width="1.250"/>
+<text x="474.000" y="540.000" text-anchor="middle" dominant-baseline="middle" font-family="Arial, 'Liberation Sans', Arimo, sans-serif" font-size="8.000" fill="#000000">mt:dna</text>
+<path d="M201.000 320.000L201.000 320.000Q211.000 320.000 211.000 330.000L211.000 330.000Q211.000 340.000 201.000 340.000L201.000 340.000Q191.000 340.000 191.000 330.000L191.000 330.000Q191.000 320.000 201.000 320.000Z" fill="#ffffff" stroke="#000000" stroke-width="1.250"/>
+<text x="201.000" y="330.000" text-anchor="middle" dominant-baseline="middle" font-family="Arial, 'Liberation Sans', Arimo, sans-serif" font-size="12.000" fill="#000000">T</text>
+<path d="M126.000 180.000L222.000 180.000Q228.000 180.000 228.000 186.000L228.000 234.000Q228.000 240.000 222.000 240.000L126.000 240.000Q120.000 240.000 120.000 234.000L120.000 186.000Q120.000 180.000 126.000 180.000Z" fill="#ffffff" stroke="#000000" stroke-width="1.250"/>
+<text x="174.000" y="210.000" text-anchor="middle" dominant-baseline="middle" font-family="Arial, 'Liberation Sans', Arimo, sans-serif" font-size="12.000" fill="#000000">Sense</text>
+<path d="M150.500 171.500L197.500 171.500L197.500 188.500L150.500 188.500Z" fill="#ffffff" stroke="#000000" stroke-width="1.250"/>
+<text x="174.000" y="180.000" text-anchor="middle" dominant-baseline="middle" font-family="Arial, 'Liberation Sans', Arimo, sans-serif" font-size="8.000" fill="#000000">mt:dna</text>
+<path d="M212.000 240.000Q212.000 244.556 208.778 247.778Q205.556 251.000 201.000 251.000Q196.444 251.000 193.222 247.778Q190.000 244.556 190.000 240.000Q190.000 235.444 193.222 232.222Q196.444 229.000 201.000 229.000Q205.556 229.000 208.778 232.222Q212.000 235.444 212.000 240.000Z" fill="#ffffff" stroke="#000000" stroke-width="1.250"/>
+<clipPath id="clip-0"><path clip-rule="nonzero" d="M212.000 240.000Q212.000 244.556 208.778 247.778Q205.556 251.000 201.000 251.000Q196.444 251.000 193.222 247.778Q190.000 244.556 190.000 240.000Q190.000 235.444 193.222 232.222Q196.444 229.000 201.000 229.000Q205.556 229.000 208.778 232.222Q212.000 235.444 212.000 240.000Z"/></clipPath>
+<path d="M201.000 229.000L212.000 229.000L212.000 251.000L201.000 251.000Z" fill="#000000" stroke="none" stroke-width="0.000" clip-path="url(#clip-0)"/>
+<path d="M212.000 240.000Q212.000 244.556 208.778 247.778Q205.556 251.000 201.000 251.000Q196.444 251.000 193.222 247.778Q190.000 244.556 190.000 240.000Q190.000 235.444 193.222 232.222Q196.444 229.000 201.000 229.000Q205.556 229.000 208.778 232.222Q212.000 235.444 212.000 240.000Z" fill="none" stroke="#000000" stroke-width="1.250"/>
+<path d="M447.000 320.000L447.000 320.000Q457.000 320.000 457.000 330.000L457.000 330.000Q457.000 340.000 447.000 340.000L447.000 340.000Q437.000 340.000 437.000 330.000L437.000 330.000Q437.000 320.000 447.000 320.000Z" fill="#ffffff" stroke="#000000" stroke-width="1.250"/>
+<text x="447.000" y="330.000" text-anchor="middle" dominant-baseline="middle" font-family="Arial, 'Liberation Sans', Arimo, sans-serif" font-size="12.000" fill="#000000">T</text>
+<path d="M426.000 180.000L522.000 180.000Q528.000 180.000 528.000 186.000L528.000 234.000Q528.000 240.000 522.000 240.000L426.000 240.000Q420.000 240.000 420.000 234.000L420.000 186.000Q420.000 180.000 426.000 180.000Z" fill="#ffffff" stroke="#000000" stroke-width="1.250"/>
+<text x="474.000" y="210.000" text-anchor="middle" dominant-baseline="middle" font-family="Arial, 'Liberation Sans', Arimo, sans-serif" font-size="12.000" fill="#000000">Antisense</text>
+<path d="M450.500 171.500L497.500 171.500L497.500 188.500L450.500 188.500Z" fill="#ffffff" stroke="#000000" stroke-width="1.250"/>
+<text x="474.000" y="180.000" text-anchor="middle" dominant-baseline="middle" font-family="Arial, 'Liberation Sans', Arimo, sans-serif" font-size="8.000" fill="#000000">mt:dna</text>
+<path d="M458.000 240.000Q458.000 244.556 454.778 247.778Q451.556 251.000 447.000 251.000Q442.444 251.000 439.222 247.778Q436.000 244.556 436.000 240.000Q436.000 235.444 439.222 232.222Q442.444 229.000 447.000 229.000Q451.556 229.000 454.778 232.222Q458.000 235.444 458.000 240.000Z" fill="#ffffff" stroke="#000000" stroke-width="1.250"/>
+<clipPath id="clip-1"><path clip-rule="nonzero" d="M458.000 240.000Q458.000 244.556 454.778 247.778Q451.556 251.000 447.000 251.000Q442.444 251.000 439.222 247.778Q436.000 244.556 436.000 240.000Q436.000 235.444 439.222 232.222Q442.444 229.000 447.000 229.000Q451.556 229.000 454.778 232.222Q458.000 235.444 458.000 240.000Z"/></clipPath>
+<path d="M447.000 229.000L458.000 229.000L458.000 251.000L447.000 251.000Z" fill="#000000" stroke="none" stroke-width="0.000" clip-path="url(#clip-1)"/>
+<path d="M458.000 240.000Q458.000 244.556 454.778 247.778Q451.556 251.000 447.000 251.000Q442.444 251.000 439.222 247.778Q436.000 244.556 436.000 240.000Q436.000 235.444 439.222 232.222Q442.444 229.000 447.000 229.000Q451.556 229.000 454.778 232.222Q458.000 235.444 458.000 240.000Z" fill="none" stroke="#000000" stroke-width="1.250"/>
+<path d="M270.000 50.000L297.000 80.000L270.000 110.000L378.000 110.000L351.000 80.000L378.000 50.000Z" fill="#ffffff" stroke="#000000" stroke-width="1.250"/>
+<text x="324.000" y="80.000" text-anchor="middle" dominant-baseline="middle" font-family="Arial, 'Liberation Sans', Arimo, sans-serif" font-size="12.000" fill="#000000">Heat</text>
+<path d="M324.000 316.000L324.000 295.000" fill="none" stroke="#000000" stroke-width="1.250"/>
+<path d="M324.000 358.000L324.000 379.000" fill="none" stroke="#000000" stroke-width="1.250"/>
+<path d="M366.000 337.000Q366.000 345.354 362.803 353.073Q359.606 360.791 353.698 366.698Q347.791 372.606 340.073 375.803Q332.354 379.000 324.000 379.000Q315.646 379.000 307.927 375.803Q300.209 372.606 294.301 366.698Q288.394 360.791 285.197 353.073Q282.000 345.354 282.000 337.000Q282.000 328.646 285.197 320.927Q288.394 313.209 294.301 307.301Q300.209 301.394 307.927 298.197Q315.646 295.000 324.000 295.000Q332.354 295.000 340.073 298.197Q347.791 301.394 353.698 307.301Q359.606 313.209 362.803 320.927Q366.000 328.646 366.000 337.000Z" fill="#ffffff" stroke="#000000" stroke-width="1.250"/>
+<text x="324.000" y="337.000" text-anchor="middle" dominant-baseline="middle" font-family="Arial, 'Liberation Sans', Arimo, sans-serif" font-size="12.000" fill="#000000">OR</text>
+<path d="M370.000 210.000Q370.000 212.485 368.243 214.243Q366.485 216.000 364.000 216.000Q361.515 216.000 359.757 214.243Q358.000 212.485 358.000 210.000Q358.000 207.515 359.757 205.757Q361.515 204.000 364.000 204.000Q366.485 204.000 368.243 205.757Q370.000 207.515 370.000 210.000Z" fill="#000000" stroke="#000000" stroke-width="1.250"/>
+<path d="M290.000 210.000Q290.000 212.485 288.243 214.243Q286.485 216.000 284.000 216.000Q281.515 216.000 279.757 214.243Q278.000 212.485 278.000 210.000Q278.000 207.515 279.757 205.757Q281.515 204.000 284.000 204.000Q286.485 204.000 288.243 205.757Q290.000 207.515 290.000 210.000Z" fill="#000000" stroke="#000000" stroke-width="1.250"/>
+<path d="M180.000 380.000Q180.000 382.485 178.243 384.243Q176.485 386.000 174.000 386.000Q171.515 386.000 169.757 384.243Q168.000 382.485 168.000 380.000Q168.000 377.515 169.757 375.757Q171.515 374.000 174.000 374.000Q176.485 374.000 178.243 375.757Q180.000 377.515 180.000 380.000Z" fill="#000000" stroke="#000000" stroke-width="1.250"/>
+<path d="M180.000 430.000Q180.000 432.485 178.243 434.243Q176.485 436.000 174.000 436.000Q171.515 436.000 169.757 434.243Q168.000 432.485 168.000 430.000Q168.000 427.515 169.757 425.757Q171.515 424.000 174.000 424.000Q176.485 424.000 178.243 425.757Q180.000 427.515 180.000 430.000Z" fill="#000000" stroke="#000000" stroke-width="1.250"/>
+<path d="M480.000 410.000Q480.000 412.485 478.243 414.243Q476.485 416.000 474.000 416.000Q471.515 416.000 469.757 414.243Q468.000 412.485 468.000 410.000Q468.000 407.515 469.757 405.757Q471.515 404.000 474.000 404.000Q476.485 404.000 478.243 405.757Q480.000 407.515 480.000 410.000Z" fill="#000000" stroke="#000000" stroke-width="1.250"/>
+<path d="M480.000 380.000Q480.000 382.485 478.243 384.243Q476.485 386.000 474.000 386.000Q471.515 386.000 469.757 384.243Q468.000 382.485 468.000 380.000Q468.000 377.515 469.757 375.757Q471.515 374.000 474.000 374.000Q476.485 374.000 478.243 375.757Q480.000 377.515 480.000 380.000Z" fill="#000000" stroke="#000000" stroke-width="1.250"/>
+<path d="M238.875 204.562L228.000 210.000L238.875 215.438Z" fill="#000000" stroke="none" stroke-width="0.000"/>
+<path d="M409.125 215.438L420.000 210.000L409.125 204.562Z" fill="#000000" stroke="none" stroke-width="0.000"/>
+<path d="M168.562 469.125L174.000 480.000L179.438 469.125Z" fill="#000000" stroke="none" stroke-width="0.000"/>
+<path d="M179.438 250.875L174.000 240.000L168.562 250.875Z" fill="#000000" stroke="none" stroke-width="0.000"/>
+<path d="M468.562 469.125L474.000 480.000L479.438 469.125Z" fill="#000000" stroke="none" stroke-width="0.000"/>
+<path d="M479.438 250.875L474.000 240.000L468.562 250.875Z" fill="#000000" stroke="none" stroke-width="0.000"/>
+<path d="M201.094 241.876L206.203 252.910L200.865 249.485L195.333 252.583Z" fill="#000000" stroke="#000000" stroke-width="1.000"/>
+<path d="M446.906 241.876L452.667 252.583L447.135 249.485L441.797 252.910Z" fill="#000000" stroke="#000000" stroke-width="1.000"/>
+<path d="M329.438 210.000L318.562 210.000" fill="none" stroke="#000000" stroke-width="1.250"/>
+<path d="M329.438 205.650L318.562 205.650" fill="none" stroke="#000000" stroke-width="1.250"/>
+<path d="M318.562 210.000L329.438 210.000" fill="none" stroke="#000000" stroke-width="1.250"/>
+<path d="M318.562 214.350L329.438 214.350" fill="none" stroke="#000000" stroke-width="1.250"/>
+<path d="M474.000 335.438L474.000 324.562" fill="none" stroke="#000000" stroke-width="1.250"/>
+<path d="M478.350 335.438L478.350 324.562" fill="none" stroke="#000000" stroke-width="1.250"/>
+<path d="M474.000 295.438L474.000 284.562" fill="none" stroke="#000000" stroke-width="1.250"/>
+<path d="M478.350 295.438L478.350 284.562" fill="none" stroke="#000000" stroke-width="1.250"/>
+<path d="M208.750 284.562L197.875 290.000L208.750 295.438Z" fill="#ffffff" stroke="#000000" stroke-width="1.000"/>
+<path d="M211.650 295.438L211.650 284.562" fill="none" stroke="#000000" stroke-width="1.250"/>
+<path d="M439.250 295.438L450.125 290.000L439.250 284.562Z" fill="#ffffff" stroke="#000000" stroke-width="1.000"/>
+<path d="M436.350 284.562L436.350 295.438" fill="none" stroke="#000000" stroke-width="1.250"/>
+<path d="M174.000 324.562L174.000 335.438" fill="none" stroke="#000000" stroke-width="1.250"/>
+<path d="M169.650 324.562L169.650 335.438" fill="none" stroke="#000000" stroke-width="1.250"/>
+<path d="M174.000 284.562L174.000 295.438" fill="none" stroke="#000000" stroke-width="1.250"/>
+<path d="M169.650 284.562L169.650 295.438" fill="none" stroke="#000000" stroke-width="1.250"/>
+<path d="M332.000 242.000L360.000 242.000L360.000 260.000L332.000 260.000Z" fill="#ffffff" stroke="#000000" stroke-width="1.250"/>
+<text x="346.000" y="251.000" text-anchor="middle" dominant-baseline="middle" font-family="Arial, 'Liberation Sans', Arimo, sans-serif" font-size="9.000" fill="#000000">cis</text>
+<path d="M570.000 214.000L598.000 214.000L598.000 232.000L570.000 232.000Z" fill="#ffffff" stroke="#000000" stroke-width="1.250"/>
+<text x="584.000" y="223.000" text-anchor="middle" dominant-baseline="middle" font-family="Arial, 'Liberation Sans', Arimo, sans-serif" font-size="9.000" fill="#000000">cis</text>
+<path d="M286.000 401.000L314.000 401.000L314.000 419.000L286.000 419.000Z" fill="#ffffff" stroke="#000000" stroke-width="1.250"/>
+<text x="300.000" y="410.000" text-anchor="middle" dominant-baseline="middle" font-family="Arial, 'Liberation Sans', Arimo, sans-serif" font-size="9.000" fill="#000000">cis</text>
+<path d="M334.000 421.000L362.000 421.000L362.000 439.000L334.000 439.000Z" fill="#ffffff" stroke="#000000" stroke-width="1.250"/>
+<text x="348.000" y="430.000" text-anchor="middle" dominant-baseline="middle" font-family="Arial, 'Liberation Sans', Arimo, sans-serif" font-size="9.000" fill="#000000">cis</text>
+<path d="M50.000 214.000L78.000 214.000L78.000 232.000L50.000 232.000Z" fill="#ffffff" stroke="#000000" stroke-width="1.250"/>
+<text x="64.000" y="223.000" text-anchor="middle" dominant-baseline="middle" font-family="Arial, 'Liberation Sans', Arimo, sans-serif" font-size="9.000" fill="#000000">cis</text>
+</svg>

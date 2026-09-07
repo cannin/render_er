@@ -1,0 +1,70 @@
+figure,slug,title,source,source_url,colors
+1.1,figure_1_1,Entity A assignment stimulates interaction with entity B,examples/HelloWorld.pdf,https://github.com/sbgn/entity-relationships/blob/master/examples/HelloWorld.pdf,
+1.2,figure_1_2,CaMKII regulation overview,examples/CaMKII-intro.svg,https://github.com/sbgn/entity-relationships/blob/master/examples/CaMKII-intro.svg,#0000ff;#ff0000
+2.1,figure_2_01,Entity with state variables and unit of information,examples/ex-entity.svg,https://github.com/sbgn/entity-relationships/blob/master/examples/ex-entity.svg,#0000ff;#ff0000
+2.2,figure_2_02,Alternative phosphorylation representations,images/entity-granularity.svg,https://github.com/sbgn/entity-relationships/blob/master/images/entity-granularity.svg,#0000ff;#ff0000
+2.3,figure_2_03,Outcome glyph,images/outcome.svg,https://github.com/sbgn/entity-relationships/blob/master/images/outcome.svg,
+2.4,figure_2_04,Outcome examples,examples/ex-outcome.svg,https://github.com/sbgn/entity-relationships/blob/master/examples/ex-outcome.svg,#0000ff;#ff0000
+2.5,figure_2_05,And operator,images/and.svg,https://github.com/sbgn/entity-relationships/blob/master/images/and.svg,
+2.6,figure_2_06,Or operator,images/or.svg,https://github.com/sbgn/entity-relationships/blob/master/images/or.svg,
+2.7,figure_2_07,Or operator example,examples/ex-or.svg,https://github.com/sbgn/entity-relationships/blob/master/examples/ex-or.svg,#0000ff;#ff0000
+2.8,figure_2_08,Not operator,images/not.svg,https://github.com/sbgn/entity-relationships/blob/master/images/not.svg,
+2.9,figure_2_09,Delay operator,images/delay.svg,https://github.com/sbgn/entity-relationships/blob/master/images/delay.svg,
+2.10,figure_2_10,Delay operator example,examples/ex-delay.svg,https://github.com/sbgn/entity-relationships/blob/master/examples/ex-delay.svg,#0000ff;#ff0000
+2.11,figure_2_11,Perturbing agent glyph,images/perturbation.svg,https://github.com/sbgn/entity-relationships/blob/master/images/perturbation.svg,
+2.12,figure_2_12,Perturbing agent example,examples/ex-perturbing.svg,https://github.com/sbgn/entity-relationships/blob/master/examples/ex-perturbing.svg,#ff3232
+2.13,figure_2_13,Assignment glyph,images/assignment.svg,https://github.com/sbgn/entity-relationships/blob/master/images/assignment.svg,
+2.14,figure_2_14,Assignment examples,examples/ex-assignment.svg,https://github.com/sbgn/entity-relationships/blob/master/examples/ex-assignment.svg,#0000ff;#ff0000
+2.15,figure_2_15,Interaction glyph variants,images/interaction.svg,https://github.com/sbgn/entity-relationships/blob/master/images/interaction.svg,
+2.16,figure_2_16,Interaction examples,examples/ex-interaction.svg,https://github.com/sbgn/entity-relationships/blob/master/examples/ex-interaction.svg,#0000ff;#ff0000
+2.17,figure_2_17,Interaction influence examples,examples/ex-interaction-influences.svg,https://github.com/sbgn/entity-relationships/blob/master/examples/ex-interaction-influences.svg,#0000ff;#ff0000
+2.18,figure_2_18,Phenotype glyph,images/phenotype.svg,https://github.com/sbgn/entity-relationships/blob/master/images/phenotype.svg,
+2.19,figure_2_19,Phenotype stimulation example,examples/ex-phenotype.svg,https://github.com/sbgn/entity-relationships/blob/master/examples/ex-phenotype.svg,#0000ff;#ff0000
+2.20,figure_2_20,Modulation glyph,images/modulation.svg,https://github.com/sbgn/entity-relationships/blob/master/images/modulation.svg,
+2.21,figure_2_21,Stimulation glyph,images/stimulation.svg,https://github.com/sbgn/entity-relationships/blob/master/images/stimulation.svg,
+2.22,figure_2_22,Stimulation example,examples/ex-stimulation.svg,https://github.com/sbgn/entity-relationships/blob/master/examples/ex-stimulation.svg,#0000ff;#ff0000
+2.23,figure_2_23,Inhibition glyph,images/inhibition.svg,https://github.com/sbgn/entity-relationships/blob/master/images/inhibition.svg,
+2.24,figure_2_24,Inhibition example,examples/ex-inhibition.svg,https://github.com/sbgn/entity-relationships/blob/master/examples/ex-inhibition.svg,#0000ff;#ff0000
+2.25,figure_2_25,Necessary stimulation glyph,images/necessaryStimulation.svg,https://github.com/sbgn/entity-relationships/blob/master/images/necessaryStimulation.svg,
+2.26,figure_2_26,Necessary stimulation example,examples/ex-necessaryStimulation.svg,https://github.com/sbgn/entity-relationships/blob/master/examples/ex-necessaryStimulation.svg,#0000ff;#ff0000
+2.27,figure_2_27,Absolute inhibition glyph,images/absoluteInhibition.svg,https://github.com/sbgn/entity-relationships/blob/master/images/absoluteInhibition.svg,
+2.28,figure_2_28,Absolute inhibition example,examples/ex-absoluteInhibition.svg,https://github.com/sbgn/entity-relationships/blob/master/examples/ex-absoluteInhibition.svg,#0000ff;#ff0000
+2.29,figure_2_29,Absolute stimulation glyph,images/absoluteStimulation.svg,https://github.com/sbgn/entity-relationships/blob/master/images/absoluteStimulation.svg,
+2.30,figure_2_30,Logic arc glyph,images/logicArc.svg,https://github.com/sbgn/entity-relationships/blob/master/images/logicArc.svg,
+2.31,figure_2_31,Logic arc example,examples/ex-logicArc.svg,https://github.com/sbgn/entity-relationships/blob/master/examples/ex-logicArc.svg,#0000ff;#ff0000
+2.32,figure_2_32,Unit of information glyph,images/unitInformation.svg,https://github.com/sbgn/entity-relationships/blob/master/images/unitInformation.svg,
+2.33,figure_2_33,Unit of information example,examples/ex-unitInformation.svg,https://github.com/sbgn/entity-relationships/blob/master/examples/ex-unitInformation.svg,#0000ff;#ff0000
+2.34,figure_2_34,State variable glyphs,images/stateVariable.svg,https://github.com/sbgn/entity-relationships/blob/master/images/stateVariable.svg,
+2.35,figure_2_35,Existence state variable example,examples/ex-existence.svg,https://github.com/sbgn/entity-relationships/blob/master/examples/ex-existence.svg,#ff3232
+2.36,figure_2_36,Location state variable example,examples/ex-location-2.svg,https://github.com/sbgn/entity-relationships/blob/master/examples/ex-location-2.svg,#0000ff;#ff0000
+2.37,figure_2_37,Variable value glyph,images/variableValue.svg,https://github.com/sbgn/entity-relationships/blob/master/images/variableValue.svg,
+2.38,figure_2_38,State variable assignment examples,examples/ex-stateVariable.svg,https://github.com/sbgn/entity-relationships/blob/master/examples/ex-stateVariable.svg,#ff3232
+2.39,figure_2_39,Annotation glyph,images/annotation.svg,https://github.com/sbgn/entity-relationships/blob/master/images/annotation.svg,
+2.40,figure_2_40,Annotation example,examples/ex-annotation.svg,https://github.com/sbgn/entity-relationships/blob/master/examples/ex-annotation.svg,#0000ff;#ff0000
+2.41,figure_2_41,Domain glyph,images/domain.svg,https://github.com/sbgn/entity-relationships/blob/master/images/domain.svg,
+2.42,figure_2_42,Nested domain example,examples/ex-domain.svg,https://github.com/sbgn/entity-relationships/blob/master/examples/ex-domain.svg,
+2.43,figure_2_43,Reaction requiring synchronous consequences,images/synchronous-PD.svg,https://github.com/sbgn/entity-relationships/blob/master/images/synchronous-PD.svg,
+2.44,figure_2_44,Independent ER events,images/asynchronous.svg,https://github.com/sbgn/entity-relationships/blob/master/images/asynchronous.svg,
+2.45,figure_2_45,Synchronous ER consequences,images/synchronous.svg,https://github.com/sbgn/entity-relationships/blob/master/images/synchronous.svg,
+2.46,figure_2_46,Multiple synchronous consequences,images/simultaneous.svg,https://github.com/sbgn/entity-relationships/blob/master/images/simultaneous.svg,#fc0000
+2.47,figure_2_47,GTPase activation by GEF,examples/gef.svg,https://github.com/sbgn/entity-relationships/blob/master/examples/gef.svg,
+3.1,figure_3_01,Nested entity location semantics,images/nesting-location.svg,https://github.com/sbgn/entity-relationships/blob/master/images/nesting-location.svg,
+3.2,figure_3_02,Nested entity existence semantics,images/nesting-existence.svg,https://github.com/sbgn/entity-relationships/blob/master/images/nesting-existence.svg,
+4.1,figure_4_01,Node overlap requirement,images/layout-node-node.svg,https://github.com/sbgn/entity-relationships/blob/master/images/layout-node-node.svg,#f7c158
+4.2,figure_4_02,Node-edge crossing requirement,images/layout-node-edge.svg,https://github.com/sbgn/entity-relationships/blob/master/images/layout-node-edge.svg,#f7c158
+4.3,figure_4_03,Node border-edge overlap requirement,images/layout-node-border-edge.svg,https://github.com/sbgn/entity-relationships/blob/master/images/layout-node-border-edge.svg,#f7c158
+4.4,figure_4_04,Edge-edge overlap requirement,images/layout-edge-edge.pdf,https://github.com/sbgn/entity-relationships/blob/master/images/layout-edge-edge.pdf,
+4.5,figure_4_05,Node orientation requirement,images/layout-orientation.svg,https://github.com/sbgn/entity-relationships/blob/master/images/layout-orientation.svg,
+4.6,figure_4_06,N-ary interaction layout requirement,images/layout-connecting-arcs.svg,https://github.com/sbgn/entity-relationships/blob/master/images/layout-connecting-arcs.svg,
+4.7,figure_4_07,Avoiding node-edge crossings,images/layout-node-edge-2.svg,https://github.com/sbgn/entity-relationships/blob/master/images/layout-node-edge-2.svg,#f7c158
+A.1,figure_a_01,RTK entity definitions,examples/rtk-entities.svg,https://github.com/sbgn/entity-relationships/blob/master/examples/rtk-entities.svg,#419ae6;#c5e0f7;#f7efdb;#f9f3e5;#fcf8f0
+A.2,figure_a_02,RTK state variable assignments,examples/rtk-states.svg,https://github.com/sbgn/entity-relationships/blob/master/examples/rtk-states.svg,#419ae6;#c5e0f7;#f7efdb;#f9f3e5;#fcf8f0
+A.3,figure_a_03,RTK receptor-ligand binding,examples/rtk-binding.svg,https://github.com/sbgn/entity-relationships/blob/master/examples/rtk-binding.svg,#419ae6;#c5e0f7;#f7efdb;#f9f3e5;#fcf8f0
+A.4,figure_a_04,RTK receptor dimer formation,examples/rtk-dimerisation.svg,https://github.com/sbgn/entity-relationships/blob/master/examples/rtk-dimerisation.svg,#419ae6;#c5e0f7;#f7efdb;#f9f3e5;#fcf8f0
+A.5,figure_a_05,RTK dimer formation control,examples/rtk-dimer-control.svg,https://github.com/sbgn/entity-relationships/blob/master/examples/rtk-dimer-control.svg,#419ae6;#c5e0f7;#f7efdb;#f9f3e5;#fcf8f0
+A.6,figure_a_06,RTK kinase domain activation,examples/rtk-kinase-activation.svg,https://github.com/sbgn/entity-relationships/blob/master/examples/rtk-kinase-activation.svg,#419ae6;#c5e0f7;#f7efdb;#f9f3e5;#fcf8f0
+A.7,figure_a_07,Complete RTK activation diagram,examples/rtk.svg,https://github.com/sbgn/entity-relationships/blob/master/examples/rtk.svg,#419ae6;#c5e0f7;#f7efdb;#f9f3e5;#fcf8f0
+A.8,figure_a_08,RTK active kinase complexes,examples/rtk-complex.pdf,https://github.com/sbgn/entity-relationships/blob/master/examples/rtk-complex.pdf,
+A.9,figure_a_09,Polymerase chain reaction,examples/PCR.svg,https://github.com/sbgn/entity-relationships/blob/master/examples/PCR.svg,
+A.10,figure_a_10,CaMKII regulation and synaptic plasticity,examples/CaMKII-intro.svg,https://github.com/sbgn/entity-relationships/blob/master/examples/CaMKII-intro.svg,#0000ff;#ff0000
+B,appendix_b_reference_card,SBGN ER Level 1 reference card,images/refcard.svg,https://github.com/sbgn/entity-relationships/blob/master/images/refcard.svg,
