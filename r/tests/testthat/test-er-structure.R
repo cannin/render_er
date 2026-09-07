@@ -50,3 +50,64 @@ test_that("explicit paths retain auxiliary endpoints", {
   expect_equal(nrow(points), 3)
   expect_equal(points$glyph_id[c(1, 3)], c("outcome", "target"))
 })
+
+test_that("explicit interior endpoints are clipped to ER glyph borders", {
+  glyphs <- list(
+    source = list(
+      class = "entity",
+      label = "source",
+      bbox = list(x = 0, y = 0, w = 20, h = 20)
+    ),
+    target = list(
+      class = "entity",
+      label = "target",
+      bbox = list(x = 80, y = 0, w = 20, h = 20)
+    )
+  )
+  arc <- list(
+    source = "source",
+    target = "target",
+    points = data.frame(x = c(10, 90), y = c(10, 10))
+  )
+
+  points <- renderSbgnR:::js_arc_points(arc, glyphs, list())
+
+  expect_equal(points$x, c(20, 80))
+  expect_equal(points$y, c(10, 10))
+})
+
+test_that("ER endpoints stop at nested auxiliary symbol borders", {
+  glyphs <- list(
+    value = list(
+      id = "value",
+      parent_id = NULL,
+      class = "variable value",
+      label = "T",
+      bbox = list(x = 0, y = 30, w = 20, h = 20)
+    ),
+    entity = list(
+      id = "entity",
+      parent_id = NULL,
+      class = "entity",
+      label = "",
+      bbox = list(x = 0, y = 0, w = 20, h = 20)
+    ),
+    existence = list(
+      id = "existence",
+      parent_id = "entity",
+      class = "existence",
+      label = "",
+      bbox = list(x = 7, y = 15, w = 6, h = 10)
+    )
+  )
+  arc <- list(
+    source = "value",
+    target = "entity",
+    points = data.frame(x = c(10, 10), y = c(30, 18))
+  )
+
+  points <- renderSbgnR:::js_arc_points(arc, glyphs, list())
+
+  expect_equal(points$x[2], 10)
+  expect_equal(points$y[2], 25)
+})

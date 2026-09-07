@@ -1537,11 +1537,22 @@ func estimateLabelWidth(label string, fontPx float64) float64 {
 func jsArcRenderPoints(arc Arc, glyphByID map[string]*Glyph, portParentByID map[string]string) ([]Point, string, string, bool) {
 	sourceID := jsEndpointGlyphID(arc.Source, portParentByID)
 	targetID := jsEndpointGlyphID(arc.Target, portParentByID)
-	// Explicit coordinates are authoritative and remain drawable when an
-	// endpoint is an outcome, state variable, or arc port rather than a
-	// standalone node.
+	// Explicit coordinates remain drawable for auxiliary endpoints, but an
+	// endpoint inside a referenced glyph is clipped to that glyph's boundary.
 	if len(arc.Points) >= 2 {
-		return append([]Point(nil), arc.Points...), sourceID, targetID, true
+		points := append([]Point(nil), arc.Points...)
+		if other, ok := firstDistinctPoint(points[1:], points[0]); ok {
+			points[0] = jsClipExplicitEndpoint(arc.Source, points[0], other, glyphByID, portParentByID)
+		}
+		last := len(points) - 1
+		reversed := make([]Point, 0, last)
+		for index := last - 1; index >= 0; index-- {
+			reversed = append(reversed, points[index])
+		}
+		if other, ok := firstDistinctPoint(reversed, points[last]); ok {
+			points[last] = jsClipExplicitEndpoint(arc.Target, points[last], other, glyphByID, portParentByID)
+		}
+		return points, sourceID, targetID, true
 	}
 	sourceGlyph := glyphByID[sourceID]
 	targetGlyph := glyphByID[targetID]
@@ -1713,10 +1724,78 @@ func firstAuxiliaryBoundaryPoint(rects []PixelRect, other Point, target Point) (
 // jsNodeBoundaryPoint intersects a center-to-center segment with the JS node shape.
 // Parameters: glyph is the endpoint glyph; other is the opposite glyph center.
 func jsNodeBoundaryPoint(glyph *Glyph, other Point) Point {
-	if jsStyleForGlyph(glyph, nil).Shape == "ellipse" {
+	if jsGlyphHasEllipticalEndpoint(glyph) {
 		return ellipseBoundaryPoint(*glyph.BBox, other)
 	}
 	return rectBoundaryPoint(*glyph.BBox, other)
+}
+
+// jsClipExplicitEndpoint clips an endpoint to an overlapping nested symbol first.
+// Parameters: reference is the arc endpoint id; endpoint and other define its direction.
+func jsClipExplicitEndpoint(reference string, endpoint Point, other Point, glyphByID map[string]*Glyph, portParentByID map[string]string) Point {
+	if _, isPort := portParentByID[reference]; isPort {
+		return endpoint
+	}
+	bestDistance := math.Inf(1)
+	bestPoint := endpoint
+	for _, glyph := range glyphByID {
+		if glyph.ParentID != reference || !jsPointInsideGlyph(glyph, endpoint) {
+			continue
+		}
+		boundary := jsNodeBoundaryPoint(glyph, other)
+		distance := math.Hypot(boundary.X-other.X, boundary.Y-other.Y)
+		if distance < bestDistance {
+			bestDistance = distance
+			bestPoint = boundary
+		}
+	}
+	if isFinite(bestDistance) {
+		return bestPoint
+	}
+	if glyph := glyphByID[reference]; glyph != nil && jsPointInsideGlyph(glyph, endpoint) {
+		return jsNodeBoundaryPoint(glyph, other)
+	}
+	return endpoint
+}
+
+// jsGlyphHasEllipticalEndpoint identifies symbols with elliptical boundaries.
+// Parameters: glyph is the endpoint glyph to classify.
+func jsGlyphHasEllipticalEndpoint(glyph *Glyph) bool {
+	return glyph != nil && (glyph.ClassName == "existence" || glyph.ClassName == "location" || jsStyleForGlyph(glyph, nil).Shape == "ellipse")
+}
+
+// jsPointInsideGlyph reports whether point is strictly inside the glyph shape.
+// Parameters: glyph is the referenced endpoint glyph; point is the explicit endpoint.
+func jsPointInsideGlyph(glyph *Glyph, point Point) bool {
+	if glyph == nil || glyph.BBox == nil {
+		return false
+	}
+	bbox := *glyph.BBox
+	const epsilon = 1e-6
+	if jsGlyphHasEllipticalEndpoint(glyph) {
+		rx := bbox.W / 2.0
+		ry := bbox.H / 2.0
+		if rx <= epsilon || ry <= epsilon {
+			return false
+		}
+		centerX := bbox.X + rx
+		centerY := bbox.Y + ry
+		normalized := math.Pow((point.X-centerX)/rx, 2) + math.Pow((point.Y-centerY)/ry, 2)
+		return normalized < 1.0-epsilon
+	}
+	return point.X > bbox.X+epsilon && point.X < bbox.X+bbox.W-epsilon &&
+		point.Y > bbox.Y+epsilon && point.Y < bbox.Y+bbox.H-epsilon
+}
+
+// firstDistinctPoint returns the first path point separated from endpoint.
+// Parameters: candidates are ordered away from endpoint; endpoint is the point to compare.
+func firstDistinctPoint(candidates []Point, endpoint Point) (Point, bool) {
+	for _, point := range candidates {
+		if math.Hypot(point.X-endpoint.X, point.Y-endpoint.Y) > 1e-6 {
+			return point, true
+		}
+	}
+	return Point{}, false
 }
 
 // rectBoundaryPoint intersects a line from another point with a rectangle.

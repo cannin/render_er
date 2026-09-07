@@ -1681,8 +1681,8 @@ fn js_text_color_for_fill(fill: Rgba) -> Rgba {
 /// Resolves an arc's visible endpoints and referenced glyph IDs.
 ///
 /// Explicit SBGN path points take precedence because they normally lie on glyph
-/// boundaries. Falling back to computed boundaries keeps markers from being
-/// hidden beneath glyphs when path geometry is absent.
+/// boundaries. Interior endpoints are clipped to their referenced glyph so an
+/// ER relationship never terminates at the center of a connecting symbol.
 fn js_arc_points(
     arc: &Arc,
     glyph_lookup: &HashMap<&str, &Glyph>,
@@ -1691,7 +1691,36 @@ fn js_arc_points(
     let source_ref = arc.source.as_deref()?;
     let target_ref = arc.target.as_deref()?;
     if let (Some(start), Some(end)) = (arc.points.first(), arc.points.last()) {
-        return Some((*start, *end, source_ref.to_string(), target_ref.to_string()));
+        let source_other = arc
+            .points
+            .iter()
+            .skip(1)
+            .copied()
+            .find(|point| (point.x - start.x).hypot(point.y - start.y) > 1e-6);
+        let target_other = arc
+            .points
+            .iter()
+            .rev()
+            .skip(1)
+            .copied()
+            .find(|point| (point.x - end.x).hypot(point.y - end.y) > 1e-6);
+        let start = source_other
+            .map(|other| {
+                js_clip_explicit_endpoint(
+                    source_ref,
+                    *start,
+                    other,
+                    glyph_lookup,
+                    port_parent_lookup,
+                )
+            })
+            .unwrap_or(*start);
+        let end = target_other
+            .map(|other| {
+                js_clip_explicit_endpoint(target_ref, *end, other, glyph_lookup, port_parent_lookup)
+            })
+            .unwrap_or(*end);
+        return Some((start, end, source_ref.to_string(), target_ref.to_string()));
     }
     let source_id = port_parent_lookup
         .get(source_ref)
@@ -1814,10 +1843,71 @@ fn glyph_center_point(glyph: &Glyph) -> Option<Point> {
 }
 
 fn js_node_boundary_point(glyph: &Glyph, other: Point) -> Option<Point> {
-    if js_glyph_style(glyph, &HashMap::new()).shape == "ellipse" {
+    if js_glyph_has_elliptical_endpoint(glyph) {
         return ellipse_boundary_point(glyph.bbox?, other);
     }
     rect_boundary_point(glyph.bbox?, other)
+}
+
+/// Clips an explicit endpoint against an intersected parent or auxiliary glyph.
+fn js_clip_explicit_endpoint(
+    reference: &str,
+    endpoint: Point,
+    other: Point,
+    glyph_lookup: &HashMap<&str, &Glyph>,
+    port_parent_lookup: &HashMap<&str, &str>,
+) -> Point {
+    if port_parent_lookup.contains_key(reference) {
+        return endpoint;
+    }
+    let nested_boundary = glyph_lookup
+        .values()
+        .copied()
+        .filter(|glyph| glyph.parent_id.as_deref() == Some(reference))
+        .filter(|glyph| js_point_inside_glyph(glyph, endpoint))
+        .filter_map(|glyph| js_node_boundary_point(glyph, other))
+        .min_by(|left, right| {
+            let left_distance = (left.x - other.x).hypot(left.y - other.y);
+            let right_distance = (right.x - other.x).hypot(right.y - other.y);
+            left_distance.total_cmp(&right_distance)
+        });
+    if let Some(boundary) = nested_boundary {
+        return boundary;
+    }
+    glyph_lookup
+        .get(reference)
+        .copied()
+        .filter(|glyph| js_point_inside_glyph(glyph, endpoint))
+        .and_then(|glyph| js_node_boundary_point(glyph, other))
+        .unwrap_or(endpoint)
+}
+
+fn js_glyph_has_elliptical_endpoint(glyph: &Glyph) -> bool {
+    matches!(glyph.class_name.as_str(), "existence" | "location")
+        || js_glyph_style(glyph, &HashMap::new()).shape == "ellipse"
+}
+
+/// Reports whether a point lies strictly inside the painted glyph shape.
+fn js_point_inside_glyph(glyph: &Glyph, point: Point) -> bool {
+    let Some(bbox) = glyph.bbox else {
+        return false;
+    };
+    const EPSILON: f64 = 1e-6;
+    if js_glyph_has_elliptical_endpoint(glyph) {
+        let rx = bbox.w / 2.0;
+        let ry = bbox.h / 2.0;
+        if rx <= EPSILON || ry <= EPSILON {
+            return false;
+        }
+        let center_x = bbox.x + rx;
+        let center_y = bbox.y + ry;
+        return ((point.x - center_x) / rx).powi(2) + ((point.y - center_y) / ry).powi(2)
+            < 1.0 - EPSILON;
+    }
+    point.x > bbox.x + EPSILON
+        && point.x < bbox.x + bbox.w - EPSILON
+        && point.y > bbox.y + EPSILON
+        && point.y < bbox.y + bbox.h - EPSILON
 }
 
 #[allow(dead_code)]
@@ -4239,6 +4329,67 @@ mod tests {
         let (glyphs, _, _) = parse_example(include_str!("../examples/reference_card.sbgn"));
         assert!(glyphs.iter().any(|glyph| glyph.id == "glyph32"));
         assert!(glyphs.iter().any(|glyph| glyph.id == "arc0.0"));
+    }
+
+    #[test]
+    fn clips_explicit_er_endpoints_to_glyph_boundaries() {
+        let (glyphs, arcs, _) = parse_example(
+            r#"<sbgn xmlns="http://sbgn.org/libsbgn/0.3">
+              <map id="map" language="entity relationship">
+                <glyph id="source" class="entity">
+                  <bbox x="0" y="0" w="20" h="20"/>
+                </glyph>
+                <glyph id="target" class="entity">
+                  <bbox x="80" y="0" w="20" h="20"/>
+                </glyph>
+                <arc id="arc" class="interaction" source="source" target="target">
+                  <start x="10" y="10"/><end x="90" y="10"/>
+                </arc>
+              </map>
+            </sbgn>"#,
+        );
+        let glyph_lookup: HashMap<&str, &Glyph> = glyphs
+            .iter()
+            .map(|glyph| (glyph.id.as_str(), glyph))
+            .collect();
+        let (start, end, _, _) =
+            js_arc_points(&arcs[0], &glyph_lookup, &HashMap::new()).expect("ER arc should resolve");
+
+        assert_eq!(start.x, 20.0);
+        assert_eq!(start.y, 10.0);
+        assert_eq!(end.x, 80.0);
+        assert_eq!(end.y, 10.0);
+    }
+
+    #[test]
+    fn clips_er_endpoints_to_nested_auxiliary_boundaries() {
+        let (glyphs, arcs, _) = parse_example(
+            r#"<sbgn xmlns="http://sbgn.org/libsbgn/0.3">
+              <map id="map" language="entity relationship">
+                <glyph id="value" class="variable value">
+                  <label text="T"/><bbox x="0" y="30" w="20" h="20"/>
+                </glyph>
+                <glyph id="entity" class="entity">
+                  <bbox x="0" y="0" w="20" h="20"/>
+                  <glyph id="existence" class="existence">
+                    <bbox x="7" y="15" w="6" h="10"/>
+                  </glyph>
+                </glyph>
+                <arc id="arc" class="assignment" source="value" target="entity">
+                  <start x="10" y="30"/><end x="10" y="18"/>
+                </arc>
+              </map>
+            </sbgn>"#,
+        );
+        let glyph_lookup: HashMap<&str, &Glyph> = glyphs
+            .iter()
+            .map(|glyph| (glyph.id.as_str(), glyph))
+            .collect();
+        let (_, end, _, _) = js_arc_points(&arcs[0], &glyph_lookup, &HashMap::new())
+            .expect("ER assignment should resolve");
+
+        assert_eq!(end.x, 10.0);
+        assert_eq!(end.y, 25.0);
     }
 
     #[test]

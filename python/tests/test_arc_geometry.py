@@ -107,6 +107,48 @@ class ArcGeometryTests(unittest.TestCase):
         points, _, _ = resolved
         self.assertEqual(points, [Point(10.0, 5.0), Point(30.0, 5.0)])
 
+    def test_explicit_interior_endpoints_use_glyph_boundaries(self) -> None:
+        """Clip ER connections to symbol borders while retaining their path."""
+
+        arc = Arc(
+            id="arc",
+            class_name="interaction",
+            source="source",
+            target="target",
+            points=[Point(5.0, 5.0), Point(20.0, 15.0), Point(35.0, 5.0)],
+        )
+
+        resolved = js_arc_path(arc, self.glyph_lookup, {})
+
+        self.assertIsNotNone(resolved)
+        points, _, _ = resolved
+        self.assertEqual(points[1], Point(20.0, 15.0))
+        self.assertEqual((points[0].x, points[-1].x), (10.0, 30.0))
+        self.assertAlmostEqual(points[0].y, 8.333333333333334)
+        self.assertAlmostEqual(points[-1].y, 8.333333333333334)
+
+    def test_endpoint_uses_nested_auxiliary_boundary(self) -> None:
+        """Stop an ER connection at an overlapping auxiliary symbol border."""
+
+        existence = make_glyph("existence", 27.0)
+        existence.parent_id = "target"
+        existence.class_name = "existence"
+        existence.bbox = BBox(x=27.0, y=2.0, w=6.0, h=6.0)
+        self.glyph_lookup[existence.id] = existence
+        arc = Arc(
+            id="arc",
+            class_name="assignment",
+            source="source",
+            target="target",
+            points=[Point(10.0, 5.0), Point(30.0, 5.0)],
+        )
+
+        resolved = js_arc_path(arc, self.glyph_lookup, {})
+
+        self.assertIsNotNone(resolved)
+        points, _, _ = resolved
+        self.assertEqual(points[-1], Point(27.0, 5.0))
+
     def test_explicit_arc_path_accepts_auxiliary_endpoint(self) -> None:
         """Retain ER arcs whose outcome endpoint is not a standalone node."""
 

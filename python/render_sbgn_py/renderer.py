@@ -1775,9 +1775,85 @@ def js_node_boundary_point(glyph: Glyph, other_point: Point) -> Point:
         Boundary point.
     """
 
-    if js_glyph_style(glyph)["shape"] == "ellipse":
+    if js_glyph_has_elliptical_endpoint(glyph):
         return ellipse_boundary_point(glyph, other_point)
     return rect_boundary_point(glyph, other_point)
+
+
+def js_glyph_has_elliptical_endpoint(glyph: Glyph) -> bool:
+    """Return whether endpoint clipping uses the glyph's ellipse boundary."""
+
+    return glyph.class_name in {"existence", "location"} or (
+        js_glyph_style(glyph)["shape"] == "ellipse"
+    )
+
+
+def js_point_inside_glyph(glyph: Glyph, point: Point) -> bool:
+    """Report whether a point lies strictly inside the painted glyph shape.
+
+    Args:
+        glyph: Referenced endpoint glyph.
+        point: Explicit SBGN endpoint coordinate.
+
+    Returns:
+        True when the point must be projected to the glyph boundary.
+    """
+
+    if glyph.bbox is None:
+        return False
+    epsilon = 1e-6
+    if js_glyph_has_elliptical_endpoint(glyph):
+        radius_x = glyph.bbox.w / 2.0
+        radius_y = glyph.bbox.h / 2.0
+        if radius_x <= epsilon or radius_y <= epsilon:
+            return False
+        center = glyph_center_point(glyph)
+        normalized = ((point.x - center.x) / radius_x) ** 2 + (
+            (point.y - center.y) / radius_y
+        ) ** 2
+        return normalized < 1.0 - epsilon
+    return (
+        glyph.bbox.x + epsilon < point.x < glyph.bbox.x + glyph.bbox.w - epsilon
+        and glyph.bbox.y + epsilon < point.y < glyph.bbox.y + glyph.bbox.h - epsilon
+    )
+
+
+def js_clip_explicit_endpoint(
+    reference: str | None,
+    endpoint: Point,
+    other: Point,
+    glyph_lookup: dict[str, Glyph],
+    port_parent_lookup: dict[str, str],
+) -> Point:
+    """Clip an explicit endpoint against a nested symbol or its parent glyph.
+
+    Args:
+        reference: Raw SBGN source or target reference.
+        endpoint: Explicit endpoint coordinate.
+        other: First distinct path point toward the other end of the arc.
+        glyph_lookup: Mapping from glyph IDs to glyphs.
+        port_parent_lookup: Mapping from port IDs to owning glyph IDs.
+
+    Returns:
+        Endpoint on the first intersected glyph border.
+    """
+
+    if reference is None or reference in port_parent_lookup:
+        return endpoint
+    nested_boundaries = [
+        js_node_boundary_point(glyph, other)
+        for glyph in glyph_lookup.values()
+        if glyph.parent_id == reference and js_point_inside_glyph(glyph, endpoint)
+    ]
+    if nested_boundaries:
+        return min(
+            nested_boundaries,
+            key=lambda point: math.hypot(point.x - other.x, point.y - other.y),
+        )
+    glyph = glyph_lookup.get(reference)
+    if glyph is not None and js_point_inside_glyph(glyph, endpoint):
+        return js_node_boundary_point(glyph, other)
+    return endpoint
 
 
 def js_arc_marker(class_name: str) -> str:
@@ -1878,9 +1954,9 @@ def js_arc_path(
 ) -> tuple[list[Point], str, str] | None:
     """Resolve the complete SBGN arc path and endpoint glyph IDs.
 
-    Explicit ``start``, ``next``, and ``end`` coordinates are authoritative.
-    A boundary-to-boundary segment is computed only for in-memory arcs that do
-    not contain a complete coordinate path.
+    Explicit ``start``, ``next``, and ``end`` coordinates are preserved except
+    when an endpoint lies inside its referenced glyph. Interior endpoints are
+    projected to the glyph border, matching AF and PD renderer behavior.
 
     Args:
         arc: Parsed arc.
@@ -1914,6 +1990,27 @@ def js_arc_path(
                 endpoint = js_non_cytoscape_port_endpoint(glyph, reference)
                 if endpoint is not None:
                     points[index] = endpoint
+            else:
+                candidate_points = points[1:] if index == 0 else reversed(points[:-1])
+                other = next(
+                    (
+                        point
+                        for point in candidate_points
+                        if math.hypot(
+                            point.x - points[index].x, point.y - points[index].y
+                        )
+                        > 1e-6
+                    ),
+                    None,
+                )
+                if other is not None:
+                    points[index] = js_clip_explicit_endpoint(
+                        reference,
+                        points[index],
+                        other,
+                        glyph_lookup,
+                        port_parent_lookup,
+                    )
         return points, source_id, target_id
 
     source_glyph = glyph_lookup.get(source_id)

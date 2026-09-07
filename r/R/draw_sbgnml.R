@@ -1792,11 +1792,50 @@ ellipse_boundary_point <- function(glyph, other_point) {
 #' @return List with x and y.
 #' @noRd
 js_node_boundary_point <- function(glyph, other_point) {
-  style <- js_glyph_style(glyph)
-  if (style$shape == "ellipse") {
+  if (js_glyph_has_elliptical_endpoint(glyph)) {
     return(ellipse_boundary_point(glyph, other_point))
   }
   glyph_boundary_point(glyph, other_point)
+}
+
+#' Identify glyphs whose connection boundary is elliptical.
+#'
+#' @param glyph Glyph record.
+#'
+#' @return Logical scalar.
+#' @noRd
+js_glyph_has_elliptical_endpoint <- function(glyph) {
+  glyph$class %in% c("existence", "location") ||
+    js_glyph_style(glyph)$shape == "ellipse"
+}
+
+#' Check whether a point is strictly inside a rendered glyph.
+#'
+#' @param glyph Glyph record.
+#' @param point List with x and y coordinates.
+#'
+#' @return Logical scalar.
+#' @noRd
+js_point_inside_glyph <- function(glyph, point) {
+  if (is.null(glyph$bbox)) {
+    return(FALSE)
+  }
+  epsilon <- 1e-6
+  if (js_glyph_has_elliptical_endpoint(glyph)) {
+    radius_x <- glyph$bbox$w / 2
+    radius_y <- glyph$bbox$h / 2
+    if (radius_x <= epsilon || radius_y <= epsilon) {
+      return(FALSE)
+    }
+    center <- glyph_center_point(glyph)
+    normalized <- ((point$x - center$x) / radius_x)^2 +
+      ((point$y - center$y) / radius_y)^2
+    return(normalized < 1 - epsilon)
+  }
+  point$x > glyph$bbox$x + epsilon &&
+    point$x < glyph$bbox$x + glyph$bbox$w - epsilon &&
+    point$y > glyph$bbox$y + epsilon &&
+    point$y < glyph$bbox$y + glyph$bbox$h - epsilon
 }
 
 #' Build JavaScript-compatible drawable arc endpoints.
@@ -1811,9 +1850,8 @@ js_arc_points <- function(arc, glyph_lookup, port_parent_lookup) {
   source_id <- js_endpoint_glyph_id(arc$source, port_parent_lookup)
   target_id <- js_endpoint_glyph_id(arc$target, port_parent_lookup)
 
-  # SBGN path coordinates are authoritative even when an endpoint is an
-  # auxiliary outcome, state variable, or arc port. Keeping these paths makes
-  # every valid ER relationship visible instead of dropping it during lookup.
+  # Preserve explicit bends and boundary endpoints, but project endpoints that
+  # lie inside their referenced glyph to the glyph border.
   points <- arc$points
   if (
     !is.null(points) &&
@@ -1821,6 +1859,85 @@ js_arc_points <- function(arc, glyph_lookup, port_parent_lookup) {
       all(is.finite(points$x)) &&
       all(is.finite(points$y))
   ) {
+    endpoint_specs <- list(
+      list(index = 1, reference = arc$source, glyph_id = source_id, step = 1),
+      list(
+        index = nrow(points),
+        reference = arc$target,
+        glyph_id = target_id,
+        step = -1
+      )
+    )
+    for (endpoint_spec in endpoint_specs) {
+      reference <- endpoint_spec$reference
+      glyph_id <- endpoint_spec$glyph_id
+      if (
+        !is.null(reference) &&
+          !is.na(reference) &&
+          !(reference %in% names(port_parent_lookup)) &&
+          !is.null(glyph_id) &&
+          glyph_id %in% names(glyph_lookup)
+      ) {
+        glyph <- glyph_lookup[[glyph_id]]
+        index <- endpoint_spec$index
+        endpoint <- list(x = points$x[index], y = points$y[index])
+        candidate_indices <- if (endpoint_spec$step > 0) {
+          seq.int(index + 1, nrow(points))
+        } else {
+          seq.int(index - 1, 1)
+        }
+        other <- NULL
+        for (candidate_index in candidate_indices) {
+          candidate <- list(
+            x = points$x[candidate_index],
+            y = points$y[candidate_index]
+          )
+          if (
+            sqrt(
+              (candidate$x - endpoint$x)^2 +
+                (candidate$y - endpoint$y)^2
+            ) > 1e-6
+          ) {
+            other <- candidate
+            break
+          }
+        }
+        if (is.null(other)) {
+          next
+        }
+        nested_glyphs <- Filter(
+          function(candidate) {
+            identical(candidate$parent_id, reference) &&
+              js_point_inside_glyph(candidate, endpoint)
+          },
+          glyph_lookup
+        )
+        if (length(nested_glyphs) > 0) {
+          candidate_boundaries <- lapply(
+            nested_glyphs,
+            js_node_boundary_point,
+            other_point = other
+          )
+          distances <- vapply(
+            candidate_boundaries,
+            function(boundary) {
+              sqrt(
+                (boundary$x - other$x)^2 +
+                  (boundary$y - other$y)^2
+              )
+            },
+            numeric(1)
+          )
+          boundary <- candidate_boundaries[[which.min(distances)]]
+          points$x[index] <- boundary$x
+          points$y[index] <- boundary$y
+        } else if (js_point_inside_glyph(glyph, endpoint)) {
+          boundary <- js_node_boundary_point(glyph, other)
+          points$x[index] <- boundary$x
+          points$y[index] <- boundary$y
+        }
+      }
+    }
     points$glyph_id <- rep(NA_character_, nrow(points))
     points$glyph_id[1] <- source_id
     points$glyph_id[nrow(points)] <- target_id

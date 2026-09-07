@@ -68,3 +68,50 @@ func TestJSArcRenderPointsRetainsAuxiliaryEndpoints(t *testing.T) {
 		t.Fatalf("resolved endpoints = %q -> %q", sourceID, targetID)
 	}
 }
+
+// TestJSArcRenderPointsClipsInteriorEndpoints verifies ER relationships meet
+// their connecting symbols at the border rather than the center.
+func TestJSArcRenderPointsClipsInteriorEndpoints(t *testing.T) {
+	source := &Glyph{ID: "source", ClassName: "entity", BBox: &BBox{X: 0, Y: 0, W: 20, H: 20}}
+	target := &Glyph{ID: "target", ClassName: "entity", BBox: &BBox{X: 80, Y: 0, W: 20, H: 20}}
+	arc := Arc{
+		ID: "arc", ClassName: "interaction", Source: "source", Target: "target",
+		Points: []Point{{X: 10, Y: 10}, {X: 90, Y: 10}},
+	}
+
+	points, _, _, ok := jsArcRenderPoints(
+		arc,
+		map[string]*Glyph{"source": source, "target": target},
+		map[string]string{},
+	)
+	if !ok {
+		t.Fatal("jsArcRenderPoints() rejected an explicit ER path")
+	}
+	if points[0] != (Point{X: 20, Y: 10}) || points[1] != (Point{X: 80, Y: 10}) {
+		t.Fatalf("clipped points = %#v", points)
+	}
+}
+
+// TestJSArcRenderPointsClipsNestedAuxiliaryEndpoint verifies connections stop
+// at an ER auxiliary symbol that overlaps its referenced parent entity.
+func TestJSArcRenderPointsClipsNestedAuxiliaryEndpoint(t *testing.T) {
+	value := &Glyph{ID: "value", ClassName: "variable value", BBox: &BBox{X: 0, Y: 30, W: 20, H: 20}}
+	entity := &Glyph{ID: "entity", ClassName: "entity", BBox: &BBox{X: 0, Y: 0, W: 20, H: 20}}
+	existence := &Glyph{ID: "existence", ParentID: "entity", ClassName: "existence", BBox: &BBox{X: 7, Y: 15, W: 6, H: 10}}
+	arc := Arc{
+		ID: "arc", ClassName: "assignment", Source: "value", Target: "entity",
+		Points: []Point{{X: 10, Y: 30}, {X: 10, Y: 18}},
+	}
+
+	points, _, _, ok := jsArcRenderPoints(
+		arc,
+		map[string]*Glyph{"value": value, "entity": entity, "existence": existence},
+		map[string]string{},
+	)
+	if !ok {
+		t.Fatal("jsArcRenderPoints() rejected a nested ER endpoint")
+	}
+	if points[1] != (Point{X: 10, Y: 25}) {
+		t.Fatalf("nested auxiliary endpoint = %#v", points[1])
+	}
+}
