@@ -23,7 +23,7 @@ FONT_FAMILY = "Liberation Sans"
 ARROW_SIZE = 8.0
 CYTOSCAPE_ARROW_SCALE = 4.53125
 
-BORDER_COLOR = (0x55 / 255.0, 0x55 / 255.0, 0x55 / 255.0)
+BORDER_COLOR = (0.0, 0.0, 0.0)
 JS_NODE_FILL_COLOR = (1.0, 1.0, 1.0)
 JS_NODE_BORDER_COLOR = BORDER_COLOR
 JS_NODE_TEXT_COLOR = (0.0, 0.0, 0.0)
@@ -100,6 +100,7 @@ class Glyph:
     state_variable: Optional[str]
     orientation: Optional[str]
     entity_name: Optional[str] = None
+    callout: Optional[Point] = None
 
 
 @dataclass
@@ -247,6 +248,18 @@ def parse_glyph_node(
             break
 
     orientation = glyph.get("orientation")
+    callout = None
+    for child in glyph:
+        if strip_tag(child.tag) != "callout":
+            continue
+        point_node = next(
+            (node for node in child if strip_tag(node.tag) == "point"), None
+        )
+        if point_node is not None:
+            x = parse_float(point_node.get("x"))
+            y = parse_float(point_node.get("y"))
+            if x is not None and y is not None:
+                callout = Point(x, y)
 
     glyphs.append(
         Glyph(
@@ -263,6 +276,7 @@ def parse_glyph_node(
             state_variable=state_variable,
             orientation=orientation,
             entity_name=entity_name,
+            callout=callout,
         )
     )
 
@@ -286,6 +300,10 @@ def parse_sbgnml(path: Path) -> Tuple[List[Glyph], List[Arc], Bounds]:
         for child in list(map_node):
             if strip_tag(child.tag) == "glyph":
                 parse_glyph_node(child, None, glyphs)
+            elif strip_tag(child.tag) == "arcgroup":
+                for grouped_child in child:
+                    if strip_tag(grouped_child.tag) == "glyph":
+                        parse_glyph_node(grouped_child, None, glyphs)
 
     arcs: List[Arc] = []
     for arc_node in root.iter():
@@ -344,6 +362,8 @@ def parse_sbgnml(path: Path) -> Tuple[List[Glyph], List[Arc], Bounds]:
                     ).replace("\r", ""),
                 )
             )
+            if child.get("class", "") == "outcome":
+                parse_glyph_node(child, arc_node.get("id"), glyphs)
         arcs.append(
             Arc(
                 id=arc_node.get("id", ""),
@@ -372,6 +392,18 @@ def compute_bounds(glyphs: Sequence[Glyph], arcs: Sequence[Arc]) -> Bounds:
         if glyph.bbox is not None and not is_js_hidden_glyph_class(glyph.class_name):
             x_values.extend([glyph.bbox.x, glyph.bbox.x + glyph.bbox.w])
             y_values.extend([glyph.bbox.y, glyph.bbox.y + glyph.bbox.h])
+        if glyph.callout is not None:
+            x_values.append(glyph.callout.x)
+            y_values.append(glyph.callout.y)
+
+    for arc in arcs:
+        for point in arc.points:
+            x_values.append(point.x)
+            y_values.append(point.y)
+        for glyph in arc.auxiliary_glyphs:
+            if glyph.bbox is not None:
+                x_values.extend([glyph.bbox.x, glyph.bbox.x + glyph.bbox.w])
+                y_values.extend([glyph.bbox.y, glyph.bbox.y + glyph.bbox.h])
 
     if not x_values or not y_values:
         raise ValueError("No coordinates found in SBGN file")
@@ -746,6 +778,35 @@ def path_cut_rect(ctx: cairo.Context, rect: PixelRect) -> None:
     ctx.close_path()
 
 
+def path_annotation(
+    ctx: cairo.Context, rect: PixelRect, callout: Optional[Point]
+) -> None:
+    """Add the ER annotation document shape and callout tail.
+
+    Args:
+        ctx: Cairo context.
+        rect: Annotation bounding rectangle.
+        callout: Optional transformed callout endpoint.
+    """
+
+    fold = min(rect.width, rect.height) * 0.18
+    body_bottom = rect.y0 + rect.height if callout else rect.y0 + rect.height * 0.72
+    tail = callout or Point(rect.x0 + rect.width * 0.08, rect.y0 + rect.height)
+    path_polygon_points(
+        ctx,
+        [
+            Point(rect.x0, rect.y0),
+            Point(rect.x0 + rect.width - fold, rect.y0),
+            Point(rect.x0 + rect.width, rect.y0 + fold),
+            Point(rect.x0 + rect.width, body_bottom),
+            Point(rect.x0 + rect.width * 0.42, body_bottom),
+            tail,
+            Point(rect.x0 + rect.width * 0.18, body_bottom),
+            Point(rect.x0, body_bottom),
+        ],
+    )
+
+
 def path_bottom_round_rect(ctx: cairo.Context, rect: PixelRect) -> None:
     """Add the nucleic-acid feature path with rounded bottom corners."""
 
@@ -820,9 +881,6 @@ def is_ported_glyph_class(class_name: str) -> bool:
         "uncertain process",
         "association",
         "dissociation",
-        "and",
-        "or",
-        "not",
     }
 
 
@@ -1104,6 +1162,8 @@ def auxiliary_glyph_shape(glyph: Glyph) -> str:
 
     if glyph.class_name == "state variable":
         return "stadium_round_rectangle"
+    if glyph.class_name in {"existence", "location"}:
+        return "ellipse"
     return {
         "macromolecule": "round_rectangle",
         "nucleic acid feature": "bottom_round_rectangle",
@@ -1120,11 +1180,25 @@ def draw_auxiliary_glyph(
 ) -> bool:
     """Draw nested unit-of-information and state-variable glyphs."""
 
-    if glyph.class_name not in {"unit of information", "state variable"}:
+    if glyph.class_name not in {
+        "unit of information",
+        "state variable",
+        "existence",
+        "location",
+    }:
         return False
     if glyph.parent_id is None or glyph.bbox is None:
         return True
     rect = bbox_pixel_rect(transform, glyph.bbox)
+    if glyph.class_name in {"existence", "location"}:
+        diameter = min(rect.width, rect.height)
+        rect = PixelRect(
+            rect.center.x - diameter / 2.0,
+            rect.center.y - diameter / 2.0,
+            diameter,
+            diameter,
+            rect.center,
+        )
     shape = auxiliary_glyph_shape(glyph)
     if shape == "round_rectangle":
         path_round_rect(ctx, rect, max(min(rect.width, rect.height) * 0.1, 1.0))
@@ -1145,6 +1219,27 @@ def draw_auxiliary_glyph(
     ctx.set_source_rgb(*BORDER_COLOR)
     ctx.set_line_width(JS_DEFAULT_NODE_BORDER_WIDTH)
     ctx.stroke()
+    if glyph.class_name == "existence":
+        ctx.save()
+        path_ellipse(ctx, rect)
+        ctx.clip()
+        ctx.rectangle(rect.center.x, rect.y0, rect.width / 2.0, rect.height)
+        ctx.set_source_rgb(*JS_NODE_BORDER_COLOR)
+        ctx.fill()
+        ctx.restore()
+        path_ellipse(ctx, rect)
+        ctx.set_source_rgb(*JS_NODE_BORDER_COLOR)
+        ctx.set_line_width(JS_DEFAULT_NODE_BORDER_WIDTH)
+        ctx.stroke()
+    elif glyph.class_name == "location":
+        diagonal_radius = rect.width / 2.0 / math.sqrt(2.0)
+        ctx.set_source_rgb(*JS_NODE_BORDER_COLOR)
+        ctx.set_line_width(JS_DEFAULT_NODE_BORDER_WIDTH)
+        ctx.move_to(rect.center.x - diagonal_radius, rect.center.y - diagonal_radius)
+        ctx.line_to(rect.center.x + diagonal_radius, rect.center.y + diagonal_radius)
+        ctx.move_to(rect.center.x - diagonal_radius, rect.center.y + diagonal_radius)
+        ctx.line_to(rect.center.x + diagonal_radius, rect.center.y - diagonal_radius)
+        ctx.stroke()
     if glyph.class_name == "state variable":
         text = "@".join(
             part
@@ -1293,7 +1388,15 @@ def is_js_hidden_glyph_class(class_name: str) -> bool:
         True when the glyph class is hidden.
     """
 
-    return class_name in {"unit of information", "state variable", "terminal"}
+    return class_name in {
+        "unit of information",
+        "state variable",
+        "existence",
+        "location",
+        "implicit xor",
+        "influence target",
+        "terminal",
+    }
 
 
 def hex_to_rgb(hex_color: str) -> Optional[Tuple[float, float, float]]:
@@ -1497,11 +1600,11 @@ def js_glyph_style(
     if "process" in class_name or class_name in {
         "association",
         "dissociation",
-        "and",
-        "or",
-        "not",
     }:
         style["shape"] = "polygon"
+        style["border"] = JS_PROCESS_BORDER_COLOR
+    if class_name in {"and", "or", "not", "delay"}:
+        style["shape"] = "ellipse"
         style["border"] = JS_PROCESS_BORDER_COLOR
     if class_name == "submap":
         style["shape"] = "rectangle"
@@ -1510,6 +1613,19 @@ def js_glyph_style(
     if class_name == "phenotype":
         style["shape"] = "hexagon"
         style["border"] = JS_PHENOTYPE_BORDER_COLOR
+    if class_name == "entity":
+        style["shape"] = "rounded_rectangle"
+    if class_name == "interaction":
+        style["shape"] = "ellipse"
+        style["label"] = ""
+    if class_name == "outcome":
+        style["shape"] = "ellipse"
+        style["fill"] = JS_NODE_BORDER_COLOR
+        style["label"] = ""
+    if class_name == "variable value":
+        style["shape"] = "stadium_round_rectangle"
+    if class_name == "annotation":
+        style["shape"] = "annotation"
     if class_name == "source and sink":
         style["shape"] = "empty set"
         style["border"] = JS_SOURCE_SINK_BORDER_COLOR
@@ -1674,16 +1790,24 @@ def js_arc_marker(class_name: str) -> str:
         Marker name.
     """
 
-    if class_name in {"consumption", "logic arc", "equivalence arc"}:
+    if class_name in {"consumption", "interaction", "logic arc", "equivalence arc"}:
         return "none"
+    if class_name == "assignment":
+        return "barbed-arrow"
+    if class_name == "production":
+        return "filled-triangle"
     if class_name in {"inhibition", "negative influence"}:
         return "tee"
+    if class_name == "absolute inhibition":
+        return "double-tee"
     if class_name == "catalysis":
         return "circle"
     if class_name in {"modulation", "unknown influence"}:
         return "diamond"
     if class_name == "necessary stimulation":
         return "triangle-cross"
+    if class_name == "absolute stimulation":
+        return "double-triangle"
     return "triangle"
 
 
@@ -1691,7 +1815,13 @@ def js_marker_tip_offset_source(class_name: str) -> float:
     """Return Go-compatible marker-tip displacement in source units."""
 
     marker = js_arc_marker(class_name)
-    if marker in {"triangle", "triangle-cross"}:
+    if marker in {
+        "barbed-arrow",
+        "triangle",
+        "filled-triangle",
+        "triangle-cross",
+        "double-triangle",
+    }:
         return 3.125
     if marker == "circle":
         return -2.3125
@@ -1870,7 +2000,11 @@ def js_arc_line_path(
 
 
 def path_for_js_shape(
-    ctx: cairo.Context, rect: PixelRect, shape: str, glyph: Glyph | None = None
+    ctx: cairo.Context,
+    rect: PixelRect,
+    shape: str,
+    glyph: Glyph | None = None,
+    transform: Transform | None = None,
 ) -> None:
     """Add the JS primitive shape path to the current Cairo context.
 
@@ -1889,9 +2023,16 @@ def path_for_js_shape(
         path_polygon_points(ctx, tag_points(rect, glyph.orientation))
     elif glyph is not None and glyph.class_name == "perturbing agent":
         path_polygon_points(ctx, perturbing_agent_points(rect))
+    elif glyph is not None and glyph.class_name == "annotation":
+        callout = (
+            transform.map_point(glyph.callout.x, glyph.callout.y)
+            if transform is not None and glyph.callout is not None
+            else None
+        )
+        path_annotation(ctx, rect, callout)
     elif shape in {"ellipse", "empty set"}:
         path_ellipse(ctx, rect)
-    elif shape == "simple chemical":
+    elif shape in {"simple chemical", "stadium_round_rectangle"}:
         path_stadium(ctx, rect)
     elif shape == "rectangle":
         path_rect(ctx, rect)
@@ -1950,6 +2091,15 @@ def draw_js_glyph(
     )
     ctx.set_line_width(float(style["border_width"]))
     dash = style.get("border_dash")
+    if glyph.class_name in {"and", "or", "not", "delay", "interaction"}:
+        for port in glyph.ports:
+            boundary = ellipse_boundary_point(glyph, Point(port.x, port.y))
+            boundary_px = transform.map_point(boundary.x, boundary.y)
+            port_px = transform.map_point(port.x, port.y)
+            color_to_cairo(ctx, style["border"])
+            ctx.move_to(boundary_px.x, boundary_px.y)
+            ctx.line_to(port_px.x, port_px.y)
+            ctx.stroke()
     if glyph.class_name.endswith(" multimer"):
         shadow = PixelRect(
             rect.x0 + 5.0,
@@ -1958,14 +2108,14 @@ def draw_js_glyph(
             rect.height,
             Point(rect.center.x + 5.0, rect.center.y + 5.0),
         )
-        path_for_js_shape(ctx, shadow, str(style["shape"]), glyph)
+        path_for_js_shape(ctx, shadow, str(style["shape"]), glyph, transform)
         fill = style.get("fill")
         if fill is not None:
             color_to_cairo(ctx, fill)
             ctx.fill_preserve()
         color_to_cairo(ctx, style["border"])
         ctx.stroke()
-    path_for_js_shape(ctx, rect, str(style["shape"]), glyph)
+    path_for_js_shape(ctx, rect, str(style["shape"]), glyph, transform)
     fill = style.get("fill")
     if fill is not None:
         color_to_cairo(ctx, fill)
@@ -2015,9 +2165,9 @@ def draw_js_marker(
         None.
     """
 
-    if marker == "triangle":
+    if marker in {"triangle", "filled-triangle"}:
         color_to_cairo(ctx, edge_color)
-        if arc_class == "production":
+        if marker == "filled-triangle":
             draw_marker_polygon(
                 ctx,
                 end,
@@ -2038,6 +2188,18 @@ def draw_js_marker(
                 background_fill=JS_NODE_FILL_COLOR,
                 stroke_color=edge_color,
             )
+    elif marker == "barbed-arrow":
+        color_to_cairo(ctx, edge_color)
+        ctx.set_line_width(1.0)
+        draw_marker_polygon(
+            ctx,
+            end,
+            prev,
+            marker_size,
+            [(0.0, 0.0), (-0.15, -0.3), (0.0, -0.21), (0.15, -0.3)],
+            fill=True,
+            stroke_color=edge_color,
+        )
     elif marker == "diamond":
         color_to_cairo(ctx, edge_color)
         ctx.set_line_width(1.0)
@@ -2083,6 +2245,31 @@ def draw_js_marker(
         color_to_cairo(ctx, edge_color)
         ctx.set_line_width(JS_DEFAULT_EDGE_WIDTH)
         draw_inhibition_bar(ctx, end, prev, marker_size * 0.3, 0.0)
+    elif marker == "double-tee":
+        color_to_cairo(ctx, edge_color)
+        ctx.set_line_width(JS_DEFAULT_EDGE_WIDTH)
+        draw_inhibition_bar(ctx, end, prev, marker_size * 0.3, 0.0)
+        draw_inhibition_bar(ctx, end, prev, marker_size * 0.3, marker_size * 0.12)
+    elif marker == "double-triangle":
+        dx = end.x - prev.x
+        dy = end.y - prev.y
+        length = math.hypot(dx, dy)
+        if length > 1e-6:
+            unit_x = dx / length
+            unit_y = dy / length
+            for offset in (0.0, marker_size * 0.36):
+                tip = Point(end.x - unit_x * offset, end.y - unit_y * offset)
+                behind = Point(tip.x - unit_x, tip.y - unit_y)
+                draw_marker_polygon(
+                    ctx,
+                    tip,
+                    behind,
+                    marker_size,
+                    [(-0.15, -0.3), (0.0, 0.0), (0.15, -0.3)],
+                    fill=False,
+                    background_fill=JS_NODE_FILL_COLOR,
+                    stroke_color=edge_color,
+                )
     elif marker == "circle":
         ctx.arc(end.x, end.y, max(marker_size * 0.15, 1.0), 0.0, math.tau)
         color_to_cairo(ctx, JS_NODE_FILL_COLOR)
@@ -2158,6 +2345,38 @@ def draw_js_arc_marker(
     if resolved is None:
         return
     path_points, _, _ = resolved
+    if arc.class_name == "interaction":
+        source_id = js_endpoint_glyph_id(arc.source, port_parent_lookup)
+        target_id = js_endpoint_glyph_id(arc.target, port_parent_lookup)
+        source_is_entity = (
+            source_id in glyph_lookup and glyph_lookup[source_id].class_name == "entity"
+        )
+        target_is_entity = (
+            target_id in glyph_lookup and glyph_lookup[target_id].class_name == "entity"
+        )
+        edge_color = edge_color_for_style(style_config)
+        triangle = [(-0.15, -0.3), (0.0, 0.0), (0.15, -0.3)]
+        if source_is_entity:
+            draw_marker_polygon(
+                ctx,
+                transform.map_point(path_points[0].x, path_points[0].y),
+                transform.map_point(path_points[1].x, path_points[1].y),
+                ARROW_SIZE * CYTOSCAPE_ARROW_SCALE,
+                triangle,
+                fill=True,
+                stroke_color=edge_color,
+            )
+        if target_is_entity:
+            draw_marker_polygon(
+                ctx,
+                transform.map_point(path_points[-1].x, path_points[-1].y),
+                transform.map_point(path_points[-2].x, path_points[-2].y),
+                ARROW_SIZE * CYTOSCAPE_ARROW_SCALE,
+                triangle,
+                fill=True,
+                stroke_color=edge_color,
+            )
+        return
     marker = js_arc_marker(arc.class_name)
     if marker == "none":
         return

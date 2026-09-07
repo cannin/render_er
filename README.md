@@ -103,6 +103,20 @@ for hand-authored SBGN-ML examples are documented in
 catalog uses the exact figure assets referenced by the specification's TeX
 source; only `examples/rtk.sbgn` is supplied upstream as structured SBGN-ML.
 
+## Cross-language renders
+
+The Go, R, and Python renderer baselines imported from `render_sbgn` remain
+independent implementations alongside the native Rust renderer. Generate PNG
+and SVG versions of the ER all-glyphs fixture with all four languages:
+
+```bash
+uv run python scripts/render_language_examples.py
+```
+
+The results are written below `output/languages/{rust,go,r,python}/`. Python
+uses the same `pycairo` dependency as `render_sbgn`; R uses the upstream base-R
+graphics implementation and therefore does not require the R Cairo package.
+
 ## Verification
 
 ```bash

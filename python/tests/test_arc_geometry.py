@@ -1,5 +1,6 @@
 """Regression tests for SBGN arc geometry and endpoint markers."""
 
+from pathlib import Path
 import unittest
 from unittest.mock import patch
 
@@ -14,9 +15,12 @@ from render_sbgn_py.renderer import (
     Port,
     auxiliary_glyph_shape,
     draw_js_marker,
+    js_arc_marker,
     js_arc_line_path,
     js_arc_marker_point,
     js_arc_path,
+    js_glyph_style,
+    parse_sbgnml,
 )
 
 
@@ -140,6 +144,55 @@ class ArcGeometryTests(unittest.TestCase):
             with self.subTest(entity_name=entity_name):
                 glyph.entity_name = entity_name
                 self.assertEqual(auxiliary_glyph_shape(glyph), expected_shape)
+
+    def test_er_arc_classes_select_specification_markers(self) -> None:
+        """Map ER assignment and absolute influences to distinct markers."""
+
+        expected_markers = {
+            "assignment": "barbed-arrow",
+            "interaction": "none",
+            "absolute stimulation": "double-triangle",
+            "absolute inhibition": "double-tee",
+        }
+        for arc_class, expected_marker in expected_markers.items():
+            with self.subTest(arc_class=arc_class):
+                self.assertEqual(js_arc_marker(arc_class), expected_marker)
+
+    def test_er_glyph_classes_select_specification_shapes(self) -> None:
+        """Map representative ER glyphs to their intended primitives."""
+
+        expected_shapes = {
+            "entity": "rounded_rectangle",
+            "interaction": "ellipse",
+            "outcome": "ellipse",
+            "variable value": "stadium_round_rectangle",
+            "annotation": "annotation",
+        }
+        glyph = make_glyph("er", 0.0)
+        for glyph_class, expected_shape in expected_shapes.items():
+            with self.subTest(glyph_class=glyph_class):
+                glyph.class_name = glyph_class
+                self.assertEqual(js_glyph_style(glyph)["shape"], expected_shape)
+
+    def test_er_fixture_parses_arc_groups_and_arc_outcomes(self) -> None:
+        """Retain grouped interactions and outcomes attached to ER arcs."""
+
+        fixture_path = (
+            Path(__file__).resolve().parents[2]
+            / "render_examples"
+            / "er_all_glyphs.sbgn"
+        )
+
+        glyphs, arcs, _ = parse_sbgnml(fixture_path)
+
+        self.assertTrue(any(glyph.class_name == "interaction" for glyph in glyphs))
+        self.assertTrue(
+            any(
+                glyph.class_name == "outcome" and glyph.parent_id is not None
+                for glyph in glyphs
+            )
+        )
+        self.assertTrue(any(arc.class_name == "interaction" for arc in arcs))
 
     def test_hollow_stimulation_marker_masks_underlying_line(self) -> None:
         """Fill hollow stimulation markers with the node background."""
