@@ -81,7 +81,7 @@ def main() -> None:
     )
     run_renderer(
         "python",
-        ["uv", "run", "render_sbgn_py", "draw_sbgnml"],
+        ["uv", "run", "--frozen", "render_sbgn_py", "draw_sbgnml"],
         REPOSITORY_ROOT / "python",
     )
 
