@@ -42,6 +42,7 @@ const (
 	arrowSize           = 8.0
 	cytoscapeArrowScale = 4.53125
 	barLength           = 12.0
+	jsLogicalNodeSize   = 21.0
 
 	// canvas text sizing uses points internally. The renderer stores font
 	// sizes in SBGN pixel-like units and converts them when creating faces.
@@ -1617,7 +1618,7 @@ func jsEndpointGlyphID(reference string, portParentByID map[string]string) strin
 
 func isCytoscapePortedClass(className string) bool {
 	switch className {
-	case "process", "omitted process", "uncertain process", "association", "dissociation", "and", "or", "not":
+	case "process", "omitted process", "uncertain process", "association", "dissociation", "and", "or", "not", "delay":
 		return true
 	default:
 		return false
@@ -2755,10 +2756,10 @@ func (r renderer) drawJSGlyph(transform *Transform, glyph *Glyph, compoundRects 
 	style := jsStyleForGlyphWithColors(glyph, glyphColors, glyphColorType, autoContrastText, styleConfig)
 	if strings.HasSuffix(glyph.ClassName, " multimer") {
 		shadowRect := PixelRect{X0: rect.X0 + 5.0, Y0: rect.Y0 + 5.0, Width: rect.Width, Height: rect.Height, Center: Point{X: rect.Center.X + 5.0, Y: rect.Center.Y + 5.0}}
-		shadowPath := jsShapePathForGlyph(shadowRect, style.Shape, glyph)
+		shadowPath := jsShapePathForGlyph(shadowRect, style.Shape, glyph, transform)
 		r.drawJSPath(shadowPath, style.Fill, style.Border, style.BorderWidth, style.Dashed)
 	}
-	path := jsShapePathForGlyph(rect, style.Shape, glyph)
+	path := jsShapePathForGlyph(rect, style.Shape, glyph, transform)
 	r.drawJSPath(path, style.Fill, style.Border, style.BorderWidth, style.Dashed)
 	if glyph.HasClone {
 		r.drawCloneMarker(path, rect)
@@ -2845,10 +2846,10 @@ func jsShapePath(rect PixelRect, shape string) *canvas.Path {
 }
 
 // jsShapePathForGlyph creates a JS primitive path, including ported glyph polygons.
-// Parameters: rect is rendered bounds; shape and glyph select the sbgnviz primitive.
-func jsShapePathForGlyph(rect PixelRect, shape string, glyph *Glyph) *canvas.Path {
+// Parameters: rect is rendered bounds; shape and glyph select the sbgnviz primitive; transform maps source sizes.
+func jsShapePathForGlyph(rect PixelRect, shape string, glyph *Glyph, transform *Transform) *canvas.Path {
 	if glyph != nil && isPortedGlyphClass(glyph.ClassName) {
-		return portedGlyphPath(rect, glyph)
+		return portedGlyphPath(rect, glyph, transform)
 	}
 	if glyph != nil {
 		switch glyph.ClassName {
@@ -2864,15 +2865,45 @@ func jsShapePathForGlyph(rect PixelRect, shape string, glyph *Glyph) *canvas.Pat
 // isPortedGlyphClass reports whether sbgnviz draws a glyph with port stubs.
 func isPortedGlyphClass(className string) bool {
 	switch className {
-	case "process", "omitted process", "uncertain process", "association", "dissociation", "and", "or", "not":
+	case "process", "omitted process", "uncertain process", "association", "dissociation", "and", "or", "not", "delay":
 		return true
 	default:
 		return false
 	}
 }
 
+// isLogicalOperatorClass reports whether a glyph uses the common AF/PD logical-node core.
+// Parameters: className is the normalized SBGN glyph class.
+func isLogicalOperatorClass(className string) bool {
+	switch className {
+	case "and", "or", "not", "delay":
+		return true
+	default:
+		return false
+	}
+}
+
+// portedGlyphCoreRect returns the process or logical core inside the full port span.
+// Parameters: rect is the rendered port span; glyph selects the core size; transform maps source sizes.
+func portedGlyphCoreRect(rect PixelRect, glyph *Glyph, transform *Transform) PixelRect {
+	coreW := rect.Width * 0.707071
+	coreH := rect.Height * 0.707071
+	if glyph != nil && isLogicalOperatorClass(glyph.ClassName) && transform != nil {
+		coreW = transform.scaleScalar(jsLogicalNodeSize)
+		coreH = coreW
+	}
+	return PixelRect{
+		X0:     rect.Center.X - coreW/2.0,
+		Y0:     rect.Center.Y - coreH/2.0,
+		Width:  coreW,
+		Height: coreH,
+		Center: rect.Center,
+	}
+}
+
 // portedGlyphPath builds the sbgnviz process/logical operator outline.
-func portedGlyphPath(rect PixelRect, glyph *Glyph) *canvas.Path {
+// Parameters: rect is the rendered port span; glyph selects the shape; transform maps source sizes.
+func portedGlyphPath(rect PixelRect, glyph *Glyph, transform *Transform) *canvas.Path {
 	orientation := "horizontal"
 	if len(glyph.Ports) >= 2 {
 		minX, maxX := glyph.Ports[0].X, glyph.Ports[0].X
@@ -2887,10 +2918,8 @@ func portedGlyphPath(rect PixelRect, glyph *Glyph) *canvas.Path {
 			orientation = "vertical"
 		}
 	}
-	coreW := rect.Width * 0.707071
-	coreH := rect.Height * 0.707071
-	core := PixelRect{X0: rect.Center.X - coreW/2.0, Y0: rect.Center.Y - coreH/2.0, Width: coreW, Height: coreH, Center: rect.Center}
-	coreCircle := glyph.ClassName == "association" || glyph.ClassName == "dissociation" || glyph.ClassName == "and" || glyph.ClassName == "or" || glyph.ClassName == "not"
+	core := portedGlyphCoreRect(rect, glyph, transform)
+	coreCircle := glyph.ClassName == "association" || glyph.ClassName == "dissociation" || isLogicalOperatorClass(glyph.ClassName)
 	points := []Point{}
 	if orientation == "horizontal" {
 		lineHalf := math.Max(rect.Height*0.01, 0.5) / 2.0

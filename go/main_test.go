@@ -1,9 +1,58 @@
 package main
 
 import (
+	"math"
 	"strings"
 	"testing"
 )
+
+// TestPortedGlyphCoreRectMatchesAFPDLogicalSize verifies all logical operators
+// use the same 21-unit core size established by the AF and PD renderings.
+func TestPortedGlyphCoreRectMatchesAFPDLogicalSize(t *testing.T) {
+	transform := &Transform{ScaleX: 2.0, ScaleY: 3.0}
+	outer := PixelRect{
+		X0: 10, Y0: 20, Width: 168, Height: 168,
+		Center: Point{X: 94, Y: 104},
+	}
+
+	for _, className := range []string{"and", "or", "not", "delay"} {
+		t.Run(className, func(t *testing.T) {
+			core := portedGlyphCoreRect(
+				outer,
+				&Glyph{ClassName: className},
+				transform,
+			)
+			if math.Abs(core.Width-42.0) > 1e-9 || math.Abs(core.Height-42.0) > 1e-9 {
+				t.Fatalf("logical core size = %gx%g, want 42x42 rendered pixels", core.Width, core.Height)
+			}
+			if core.Center != outer.Center {
+				t.Fatalf("logical core center = %#v, want %#v", core.Center, outer.Center)
+			}
+			if !isPortedGlyphClass(className) || !isCytoscapePortedClass(className) {
+				t.Fatalf("logical class %q is not port-aware", className)
+			}
+		})
+	}
+}
+
+// TestPortedLogicalGlyphWithoutPortsRetainsStubs verifies an explicit arc that
+// ends at the source bbox remains joined to the smaller logical core.
+func TestPortedLogicalGlyphWithoutPortsRetainsStubs(t *testing.T) {
+	transform := &Transform{ScaleX: 1.0, ScaleY: 1.0}
+	outer := PixelRect{
+		X0: 10, Y0: 20, Width: 60, Height: 60,
+		Center: Point{X: 40, Y: 50},
+	}
+
+	bounds := portedGlyphPath(
+		outer,
+		&Glyph{ClassName: "and"},
+		transform,
+	).Bounds()
+	if math.Abs(bounds.X0-outer.X0) > 1e-9 || math.Abs(bounds.X1-(outer.X0+outer.Width)) > 1e-9 {
+		t.Fatalf("logical path horizontal bounds = [%g, %g], want [%g, %g]", bounds.X0, bounds.X1, outer.X0, outer.X0+outer.Width)
+	}
+}
 
 // TestParseSBGNRetainsERArcGroupNodes verifies grouped interactions and arc
 // outcomes are available to the renderer as normal glyph records.
