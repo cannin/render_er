@@ -35,6 +35,8 @@
 </clipPath>
 </defs>
 <rect x="-78" y="-35" width="936" height="420" fill="rgb(100%, 100%, 100%)" fill-opacity="1"/>
+<path fill="none" stroke-width="1.25" stroke-linecap="square" stroke-linejoin="miter" stroke="rgb(0%, 0%, 0%)" stroke-opacity="1" stroke-miterlimit="10" d="M 205 84 L 205 130 L 130 203 "/>
+<path fill="none" stroke-width="1.25" stroke-linecap="square" stroke-linejoin="miter" stroke="rgb(0%, 0%, 0%)" stroke-opacity="1" stroke-miterlimit="10" d="M 575 84 L 575 177 "/>
 <path fill-rule="nonzero" fill="rgb(100%, 100%, 100%)" fill-opacity="1" stroke-width="1.25" stroke-linecap="square" stroke-linejoin="miter" stroke="rgb(0%, 0%, 0%)" stroke-opacity="1" stroke-miterlimit="10" d="M 63.5 165 L 346.5 165 C 353.957031 165 360 171.042969 360 178.5 L 360 286.5 C 360 293.957031 353.957031 300 346.5 300 L 63.5 300 C 56.042969 300 50 293.957031 50 286.5 L 50 178.5 C 50 171.042969 56.042969 165 63.5 165 Z M 63.5 165 "/>
 <g fill="rgb(0%, 0%, 0%)" fill-opacity="1">
 <use xlink:href="#glyph-0-0" x="201.257812" y="236.65625"/>
@@ -90,4 +92,6 @@
 </g>
 <path fill-rule="nonzero" fill="rgb(0%, 0%, 0%)" fill-opacity="1" stroke-width="1.25" stroke-linecap="square" stroke-linejoin="miter" stroke="rgb(0%, 0%, 0%)" stroke-opacity="1" stroke-miterlimit="10" d="M 213 122 C 213 126.417969 209.417969 130 205 130 C 200.582031 130 197 126.417969 197 122 C 197 117.582031 200.582031 114 205 114 C 209.417969 114 213 117.582031 213 122 "/>
 <path fill-rule="nonzero" fill="rgb(0%, 0%, 0%)" fill-opacity="1" stroke-width="1.25" stroke-linecap="square" stroke-linejoin="miter" stroke="rgb(0%, 0%, 0%)" stroke-opacity="1" stroke-miterlimit="10" d="M 583 122 C 583 126.417969 579.417969 130 575 130 C 570.582031 130 567 126.417969 567 122 C 567 117.582031 570.582031 114 575 114 C 579.417969 114 583 117.582031 583 122 "/>
+<path fill-rule="nonzero" fill="rgb(0%, 0%, 0%)" fill-opacity="1" d="M 127.761719 205.179688 L 131.761719 193.699219 L 133.214844 199.871094 L 139.347656 201.492188 Z M 127.761719 205.179688 "/>
+<path fill-rule="nonzero" fill="rgb(0%, 0%, 0%)" fill-opacity="1" d="M 575 180.125 L 569.5625 169.25 L 575 172.511719 L 580.4375 169.25 Z M 575 180.125 "/>
 </svg>

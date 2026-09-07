@@ -9,6 +9,7 @@
 
 import csv
 import html
+import json
 import os
 import shutil
 import subprocess
@@ -855,6 +856,72 @@ def render_output(
     )
 
 
+def validate_renderer_structure(
+    renderer_name: str,
+    command: list[str],
+    working_directory: Path,
+    input_path: Path,
+    manifest_path: Path,
+) -> None:
+    """Require one rendered shape and line for every SBGN glyph and arc.
+
+    Args:
+        renderer_name: Human-readable renderer name for diagnostics.
+        command: Renderer command before shared arguments.
+        working_directory: Renderer working directory.
+        input_path: SBGN-ML fixture to validate.
+        manifest_path: Temporary manifest output path.
+
+    Returns:
+        None.
+
+    Raises:
+        RuntimeError: A renderer omits any glyph or arc from its manifest.
+    """
+
+    root = ET.parse(input_path).getroot()
+    expected_glyphs = {
+        glyph.get("id", "")
+        for glyph in root.findall(f".//{qualified_name('glyph')}")
+        if glyph.get("id")
+    }
+    expected_arcs = {
+        arc.get("id", "")
+        for arc in root.findall(f".//{qualified_name('arc')}")
+        if arc.get("id")
+    }
+    run(
+        [
+            *command,
+            "-i",
+            str(input_path),
+            "-o",
+            str(manifest_path),
+            "--generate-render-test-manifest",
+        ],
+        working_directory,
+    )
+    manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+    elements = manifest.get("elements", [])
+    rendered_glyphs = {
+        element.get("owner_id", "")
+        for element in elements
+        if str(element.get("kind", "")).endswith("shape")
+    }
+    rendered_arcs = {
+        element.get("owner_id", "")
+        for element in elements
+        if element.get("kind") == "edge_line"
+    }
+    missing_glyphs = sorted(expected_glyphs - rendered_glyphs)
+    missing_arcs = sorted(expected_arcs - rendered_arcs)
+    if missing_glyphs or missing_arcs:
+        raise RuntimeError(
+            f"{renderer_name} omitted structure from {input_path.name}: "
+            f"glyphs={missing_glyphs}, arcs={missing_arcs}"
+        )
+
+
 def compose_comparison(
     title: str, original_path: Path, renderer_paths: dict[str, Path], output_path: Path
 ) -> None:
@@ -1033,7 +1100,8 @@ def main() -> None:
     rust_renderer = REPOSITORY_ROOT / "target" / "release" / "render_er"
 
     with tempfile.TemporaryDirectory(prefix="render-er-upstream-") as temporary:
-        go_renderer = Path(temporary) / "render_sbgn_go"
+        temporary_root = Path(temporary)
+        go_renderer = temporary_root / "render_sbgn_go"
         run(["go", "build", "-o", str(go_renderer), "."], REPOSITORY_ROOT / "go")
         renderers = {
             "Python": (
@@ -1068,6 +1136,13 @@ def main() -> None:
             renderer_png_paths = {}
             for renderer_name, (command, working_directory) in renderers.items():
                 renderer_slug = renderer_name.lower()
+                validate_renderer_structure(
+                    renderer_name,
+                    command,
+                    working_directory,
+                    fixture_path,
+                    temporary_root / f"{slug}-{renderer_slug}.json",
+                )
                 for output_format in OUTPUT_FORMATS:
                     output_path = (
                         output_directory / renderer_slug / f"{slug}.{output_format}"

@@ -966,7 +966,7 @@ fn build_render_test_manifest(
         }
         if matches!(
             glyph.class_name.as_str(),
-            "unit of information" | "state variable"
+            "unit of information" | "state variable" | "existence" | "location"
         ) {
             if glyph.parent_id.is_none() {
                 continue;

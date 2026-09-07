@@ -58,6 +58,8 @@
 </clipPath>
 </defs>
 <rect x="-57" y="-29.5" width="684" height="354" fill="rgb(100%, 100%, 100%)" fill-opacity="1"/>
+<path fill="none" stroke-width="1.25" stroke-linecap="square" stroke-linejoin="miter" stroke="rgb(0%, 0%, 0%)" stroke-opacity="1" stroke-miterlimit="10" d="M 120 84 L 120 158 "/>
+<path fill="none" stroke-width="1.25" stroke-linecap="square" stroke-linejoin="miter" stroke="rgb(0%, 0%, 0%)" stroke-opacity="1" stroke-miterlimit="10" d="M 395 84 L 410 158 "/>
 <path fill-rule="nonzero" fill="rgb(100%, 100%, 100%)" fill-opacity="1" stroke-width="1.25" stroke-linecap="square" stroke-linejoin="miter" stroke="rgb(0%, 0%, 0%)" stroke-opacity="1" stroke-miterlimit="10" d="M 112 50 L 128 50 C 137.390625 50 145 57.609375 145 67 C 145 76.390625 137.390625 84 128 84 L 112 84 C 102.609375 84 95 76.390625 95 67 C 95 57.609375 102.609375 50 112 50 Z M 112 50 "/>
 <g fill="rgb(0%, 0%, 0%)" fill-opacity="1">
 <use xlink:href="#glyph-0-0" x="117.175781" y="71.15625"/>
@@ -107,4 +109,6 @@
 <path fill="none" stroke-width="1.25" stroke-linecap="square" stroke-linejoin="miter" stroke="rgb(0%, 0%, 0%)" stroke-opacity="1" stroke-miterlimit="10" d="M 422 170 C 422 176.628906 416.628906 182 410 182 C 403.371094 182 398 176.628906 398 170 C 398 163.371094 403.371094 158 410 158 C 416.628906 158 422 163.371094 422 170 "/>
 <path fill-rule="nonzero" fill="rgb(0%, 0%, 0%)" fill-opacity="1" stroke-width="1.25" stroke-linecap="square" stroke-linejoin="miter" stroke="rgb(0%, 0%, 0%)" stroke-opacity="1" stroke-miterlimit="10" d="M 128 125 C 128 129.417969 124.417969 133 120 133 C 115.582031 133 112 129.417969 112 125 C 112 120.582031 115.582031 117 120 117 C 124.417969 117 128 120.582031 128 125 "/>
 <path fill-rule="nonzero" fill="rgb(0%, 0%, 0%)" fill-opacity="1" stroke-width="1.25" stroke-linecap="square" stroke-linejoin="miter" stroke="rgb(0%, 0%, 0%)" stroke-opacity="1" stroke-miterlimit="10" d="M 418 125 C 418 129.417969 414.417969 133 410 133 C 405.582031 133 402 129.417969 402 125 C 402 120.582031 405.582031 117 410 117 C 414.417969 117 418 120.582031 418 125 "/>
+<path fill-rule="nonzero" fill="rgb(0%, 0%, 0%)" fill-opacity="1" d="M 120 161.125 L 114.5625 150.25 L 120 153.511719 L 125.4375 150.25 Z M 120 161.125 "/>
+<path fill-rule="nonzero" fill="rgb(0%, 0%, 0%)" fill-opacity="1" d="M 410.621094 161.0625 L 403.132812 151.484375 L 409.109375 153.601562 L 413.789062 149.324219 Z M 410.621094 161.0625 "/>
 </svg>

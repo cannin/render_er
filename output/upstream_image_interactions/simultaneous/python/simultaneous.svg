@@ -70,6 +70,7 @@
 </g>
 </defs>
 <rect x="-61" y="-54.5" width="732" height="654" fill="rgb(100%, 100%, 100%)" fill-opacity="1"/>
+<path fill="none" stroke-width="1.25" stroke-linecap="square" stroke-linejoin="miter" stroke="rgb(0%, 0%, 0%)" stroke-opacity="1" stroke-miterlimit="10" d="M 305 185 L 305 142 "/>
 <path fill="none" stroke-width="1.25" stroke-linecap="square" stroke-linejoin="miter" stroke="rgb(0%, 0%, 0%)" stroke-opacity="1" stroke-miterlimit="10" d="M 305 172 L 305 290 L 125 340 L 125 395 "/>
 <path fill="none" stroke-width="1.25" stroke-linecap="square" stroke-linejoin="miter" stroke="rgb(0%, 0%, 0%)" stroke-opacity="1" stroke-miterlimit="10" d="M 305 172 L 305 435 "/>
 <path fill="none" stroke-width="1.25" stroke-linecap="square" stroke-linejoin="miter" stroke="rgb(0%, 0%, 0%)" stroke-opacity="1" stroke-miterlimit="10" d="M 305 172 L 305 290 L 485 340 L 485 395 "/>
@@ -135,6 +136,7 @@
 <use xlink:href="#glyph-0-17" x="510.761719" y="429.15625"/>
 </g>
 <path fill-rule="nonzero" fill="rgb(0%, 0%, 0%)" fill-opacity="1" stroke-width="1.25" stroke-linecap="square" stroke-linejoin="miter" stroke="rgb(0%, 0%, 0%)" stroke-opacity="1" stroke-miterlimit="10" d="M 313 164 C 313 168.417969 309.417969 172 305 172 C 300.582031 172 297 168.417969 297 164 C 297 159.582031 300.582031 156 305 156 C 309.417969 156 313 159.582031 313 164 "/>
+<path fill-rule="nonzero" fill="rgb(0%, 0%, 0%)" fill-opacity="1" d="M 305 138.875 L 310.4375 149.75 L 305 146.488281 L 299.5625 149.75 Z M 305 138.875 "/>
 <path fill-rule="nonzero" fill="rgb(100%, 100%, 100%)" fill-opacity="1" stroke-width="1" stroke-linecap="square" stroke-linejoin="miter" stroke="rgb(0%, 0%, 0%)" stroke-opacity="1" stroke-miterlimit="10" d="M 119.5625 387.25 L 125 398.125 L 130.4375 387.25 Z M 119.5625 387.25 "/>
 <path fill-rule="nonzero" fill="rgb(100%, 100%, 100%)" fill-opacity="1" stroke-width="1" stroke-linecap="square" stroke-linejoin="miter" stroke="rgb(0%, 0%, 0%)" stroke-opacity="1" stroke-miterlimit="10" d="M 119.5625 383.625 L 119.5625 382.375 L 130.4375 382.375 L 130.4375 383.625 Z M 119.5625 383.625 "/>
 <path fill-rule="nonzero" fill="rgb(100%, 100%, 100%)" fill-opacity="1" stroke-width="1" stroke-linecap="square" stroke-linejoin="miter" stroke="rgb(0%, 0%, 0%)" stroke-opacity="1" stroke-miterlimit="10" d="M 299.5625 427.25 L 305 438.125 L 310.4375 427.25 Z M 299.5625 427.25 "/>

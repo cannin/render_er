@@ -435,12 +435,26 @@ parse_sbgn <- function(input_path) {
     for (glyph in glyph_nodes) {
       glyphs <- c(glyphs, parse_glyph_node(glyph, ns, parent_id = NULL))
     }
+    grouped_glyph_nodes <- xml_find_all(
+      map_node,
+      "./sbgn:arcgroup/sbgn:glyph",
+      ns
+    )
+    for (glyph in grouped_glyph_nodes) {
+      glyphs <- c(glyphs, parse_glyph_node(glyph, ns, parent_id = NULL))
+    }
   }
 
   arcs <- list()
   for (arc in arc_nodes) {
     auxiliary_glyphs <- list()
     for (arc_glyph in xml_find_all(arc, "./sbgn:glyph", ns)) {
+      if (identical(xml_attr(arc_glyph, "class"), "outcome")) {
+        glyphs <- c(
+          glyphs,
+          parse_glyph_node(arc_glyph, ns, parent_id = xml_attr(arc, "id"))
+        )
+      }
       auxiliary_glyphs[[length(auxiliary_glyphs) + 1]] <- list(
         id = xml_attr(arc_glyph, "id"),
         class = xml_attr(arc_glyph, "class"),
@@ -1272,6 +1286,18 @@ js_glyph_style <- function(
     style$shape <- "hexagon"
     style$border <- JS_PHENOTYPE_BORDER_COLOR
   }
+  if (class_name == "interaction") {
+    style$shape <- "ellipse"
+    style$label <- ""
+  }
+  if (class_name == "outcome") {
+    style$shape <- "ellipse"
+    style$fill <- JS_NODE_BORDER_COLOR
+    style$label <- ""
+  }
+  if (class_name == "variable value") {
+    style$shape <- "simple chemical"
+  }
   if (class_name == "source and sink") {
     style$shape <- "empty set"
     style$border <- JS_SOURCE_SINK_BORDER_COLOR
@@ -1784,6 +1810,23 @@ js_node_boundary_point <- function(glyph, other_point) {
 js_arc_points <- function(arc, glyph_lookup, port_parent_lookup) {
   source_id <- js_endpoint_glyph_id(arc$source, port_parent_lookup)
   target_id <- js_endpoint_glyph_id(arc$target, port_parent_lookup)
+
+  # SBGN path coordinates are authoritative even when an endpoint is an
+  # auxiliary outcome, state variable, or arc port. Keeping these paths makes
+  # every valid ER relationship visible instead of dropping it during lookup.
+  points <- arc$points
+  if (
+    !is.null(points) &&
+      nrow(points) >= 2 &&
+      all(is.finite(points$x)) &&
+      all(is.finite(points$y))
+  ) {
+    points$glyph_id <- rep(NA_character_, nrow(points))
+    points$glyph_id[1] <- source_id
+    points$glyph_id[nrow(points)] <- target_id
+    return(points)
+  }
+
   if (
     is.null(source_id) ||
       is.null(target_id) ||
@@ -1802,22 +1845,14 @@ js_arc_points <- function(arc, glyph_lookup, port_parent_lookup) {
     return(NULL)
   }
 
-  points <- arc$points
-  if (
-    is.null(points) ||
-      nrow(points) < 2 ||
-      any(!is.finite(points$x)) ||
-      any(!is.finite(points$y))
-  ) {
-    source_center <- glyph_center_point(source_glyph)
-    target_center <- glyph_center_point(target_glyph)
-    start_point <- js_node_boundary_point(source_glyph, target_center)
-    end_point <- js_node_boundary_point(target_glyph, source_center)
-    points <- data.frame(
-      x = c(start_point$x, end_point$x),
-      y = c(start_point$y, end_point$y)
-    )
-  }
+  source_center <- glyph_center_point(source_glyph)
+  target_center <- glyph_center_point(target_glyph)
+  start_point <- js_node_boundary_point(source_glyph, target_center)
+  end_point <- js_node_boundary_point(target_glyph, source_center)
+  points <- data.frame(
+    x = c(start_point$x, end_point$x),
+    y = c(start_point$y, end_point$y)
+  )
 
   endpoint_specs <- list(
     list(index = 1, reference = arc$source, glyph = source_glyph),
@@ -1937,7 +1972,7 @@ js_arc_line_points <- function(
 #' @return Marker type string.
 #' @noRd
 js_arc_marker <- function(arc_class) {
-  if (arc_class %in% c("consumption", "logic arc", "equivalence arc")) {
+  if (arc_class %in% c("consumption", "interaction", "logic arc", "equivalence arc")) {
     return("none")
   }
   if (arc_class %in% c("inhibition", "negative influence")) {
@@ -2172,12 +2207,47 @@ draw_js_arc_marker <- function(
     return(invisible(NULL))
   }
 
+  marker_size <- ARROW_SIZE * CYTOSCAPE_ARROW_SCALE
+  end_index <- nrow(points)
+  if (arc$class == "interaction") {
+    triangle <- data.frame(x = c(-0.15, 0, 0.15), y = c(-0.3, 0, -0.3))
+    source_id <- points$glyph_id[1]
+    target_id <- points$glyph_id[end_index]
+    source_glyph <- if (!is.na(source_id)) glyph_lookup[[source_id]] else NULL
+    target_glyph <- if (!is.na(target_id)) glyph_lookup[[target_id]] else NULL
+    if (!is.null(source_glyph) && source_glyph$class == "entity") {
+      draw_js_marker_polygon(
+        points$x[1],
+        points$y[1],
+        points$x[2],
+        points$y[2],
+        marker_size,
+        triangle,
+        fill = style_edge_color(),
+        border = NA,
+        lwd = 1
+      )
+    }
+    if (!is.null(target_glyph) && target_glyph$class == "entity") {
+      draw_js_marker_polygon(
+        points$x[end_index],
+        points$y[end_index],
+        points$x[end_index - 1],
+        points$y[end_index - 1],
+        marker_size,
+        triangle,
+        fill = style_edge_color(),
+        border = NA,
+        lwd = 1
+      )
+    }
+    return(invisible(NULL))
+  }
+
   marker <- js_arc_marker(arc$class)
   if (marker == "none") {
     return(invisible(NULL))
   }
-  marker_size <- ARROW_SIZE * CYTOSCAPE_ARROW_SCALE
-  end_index <- nrow(points)
   raw_end <- list(x = points$x[end_index], y = points$y[end_index])
   marker_point <- js_arc_marker_point(arc, points)
   marker_moved <- sqrt(

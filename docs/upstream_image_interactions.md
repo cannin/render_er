@@ -23,6 +23,11 @@ and a five-panel comparison. Open
 [`output/upstream_image_interactions/index.html`](../output/upstream_image_interactions/index.html)
 to browse the complete set.
 
+Generation also requests a structural manifest from every renderer and stops
+if any SBGN glyph or arc is absent. This guarantees that all nodes and
+relationships appear in every language output even where styling and layout
+still differ from the upstream artwork.
+
 Regenerate everything with:
 
 ```bash

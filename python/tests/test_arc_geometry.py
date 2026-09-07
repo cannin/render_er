@@ -107,6 +107,26 @@ class ArcGeometryTests(unittest.TestCase):
         points, _, _ = resolved
         self.assertEqual(points, [Point(10.0, 5.0), Point(30.0, 5.0)])
 
+    def test_explicit_arc_path_accepts_auxiliary_endpoint(self) -> None:
+        """Retain ER arcs whose outcome endpoint is not a standalone node."""
+
+        expected_points = [Point(10.0, 5.0), Point(20.0, 15.0)]
+        arc = Arc(
+            id="arc",
+            class_name="stimulation",
+            source="outcome",
+            target="target",
+            points=expected_points,
+        )
+
+        resolved = js_arc_path(arc, self.glyph_lookup, {})
+
+        self.assertIsNotNone(resolved)
+        points, source_id, target_id = resolved
+        self.assertEqual(points, expected_points)
+        self.assertEqual(source_id, "outcome")
+        self.assertEqual(target_id, "target")
+
     def test_inhibition_bar_uses_cytoscape_marker_width(self) -> None:
         """Scale a tee to its 0.3-wide Cytoscape marker coordinates."""
 

@@ -70,6 +70,9 @@
 </g>
 </defs>
 <rect x="-58.5" y="-29" width="702" height="348" fill="rgb(100%, 100%, 100%)" fill-opacity="1"/>
+<path fill="none" stroke-width="1.25" stroke-linecap="square" stroke-linejoin="miter" stroke="rgb(0%, 0%, 0%)" stroke-opacity="1" stroke-miterlimit="10" d="M 120 80 L 120 160 "/>
+<path fill="none" stroke-width="1.25" stroke-linecap="square" stroke-linejoin="miter" stroke="rgb(0%, 0%, 0%)" stroke-opacity="1" stroke-miterlimit="10" d="M 360 80 L 425 125 L 425 160 "/>
+<path fill="none" stroke-width="1.25" stroke-linecap="square" stroke-linejoin="miter" stroke="rgb(0%, 0%, 0%)" stroke-opacity="1" stroke-miterlimit="10" d="M 490 80 L 425 125 L 425 160 "/>
 <path fill-rule="nonzero" fill="rgb(100%, 100%, 100%)" fill-opacity="1" stroke-width="1.25" stroke-linecap="square" stroke-linejoin="miter" stroke="rgb(0%, 0%, 0%)" stroke-opacity="1" stroke-miterlimit="10" d="M 90 50 L 150 50 C 158.285156 50 165 56.714844 165 65 C 165 73.285156 158.285156 80 150 80 L 90 80 C 81.714844 80 75 73.285156 75 65 C 75 56.714844 81.714844 50 90 50 Z M 90 50 "/>
 <g fill="rgb(0%, 0%, 0%)" fill-opacity="1">
 <use xlink:href="#glyph-0-0" x="104.109375" y="69.15625"/>
@@ -145,4 +148,7 @@
 <path fill-rule="nonzero" fill="rgb(0%, 0%, 0%)" fill-opacity="1" stroke-width="1.25" stroke-linecap="square" stroke-linejoin="miter" stroke="rgb(0%, 0%, 0%)" stroke-opacity="1" stroke-miterlimit="10" d="M 126 122 C 126 125.3125 123.3125 128 120 128 C 116.6875 128 114 125.3125 114 122 C 114 118.6875 116.6875 116 120 116 C 123.3125 116 126 118.6875 126 122 "/>
 <path fill-rule="nonzero" fill="rgb(0%, 0%, 0%)" fill-opacity="1" stroke-width="1.25" stroke-linecap="square" stroke-linejoin="miter" stroke="rgb(0%, 0%, 0%)" stroke-opacity="1" stroke-miterlimit="10" d="M 396 102 C 396 105.3125 393.3125 108 390 108 C 386.6875 108 384 105.3125 384 102 C 384 98.6875 386.6875 96 390 96 C 393.3125 96 396 98.6875 396 102 "/>
 <path fill-rule="nonzero" fill="rgb(0%, 0%, 0%)" fill-opacity="1" stroke-width="1.25" stroke-linecap="square" stroke-linejoin="miter" stroke="rgb(0%, 0%, 0%)" stroke-opacity="1" stroke-miterlimit="10" d="M 472 102 C 472 105.3125 469.3125 108 466 108 C 462.6875 108 460 105.3125 460 102 C 460 98.6875 462.6875 96 466 96 C 469.3125 96 472 98.6875 472 102 "/>
+<path fill-rule="nonzero" fill="rgb(0%, 0%, 0%)" fill-opacity="1" d="M 120 163.125 L 114.5625 152.25 L 120 155.511719 L 125.4375 152.25 Z M 120 163.125 "/>
+<path fill-rule="nonzero" fill="rgb(0%, 0%, 0%)" fill-opacity="1" d="M 425 163.125 L 419.5625 152.25 L 425 155.511719 L 430.4375 152.25 Z M 425 163.125 "/>
+<path fill-rule="nonzero" fill="rgb(0%, 0%, 0%)" fill-opacity="1" d="M 425 163.125 L 419.5625 152.25 L 425 155.511719 L 430.4375 152.25 Z M 425 163.125 "/>
 </svg>

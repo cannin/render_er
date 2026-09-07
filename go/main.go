@@ -775,17 +775,18 @@ func buildRenderTestManifest(diagramID string, glyphs []Glyph, arcs []Arc, bound
 		if !ok {
 			continue
 		}
+		endIndex := len(points) - 1
 		marker := jsArcMarker(arc.ClassName)
 		addElement(ManifestElement{
 			ID: arc.ID + "::line", OwnerID: arc.ID, Kind: "edge_line", Type: "line", Class: arc.ClassName,
-			X1: floatPtr(points[0].X), Y1: floatPtr(points[0].Y), X2: floatPtr(points[1].X), Y2: floatPtr(points[1].Y),
-			CX: floatPtr((points[0].X + points[1].X) / 2.0), CY: floatPtr((points[0].Y + points[1].Y) / 2.0),
+			X1: floatPtr(points[0].X), Y1: floatPtr(points[0].Y), X2: floatPtr(points[endIndex].X), Y2: floatPtr(points[endIndex].Y),
+			CX: floatPtr((points[0].X + points[endIndex].X) / 2.0), CY: floatPtr((points[0].Y + points[endIndex].Y) / 2.0),
 			Marker: marker, Source: sourceID, Target: targetID,
 		})
 		if marker != "none" {
 			markerPoint, markerOK := jsArcMarkerPoint(arc, glyphByID, portParentByID, auxiliaryRectsByParent)
 			if !markerOK {
-				markerPoint = points[1]
+				markerPoint = points[endIndex]
 			}
 			addElement(ManifestElement{
 				ID: arc.ID + "::marker", OwnerID: arc.ID, Kind: "edge_marker", Type: marker, Class: arc.ClassName,
@@ -1413,6 +1414,18 @@ func jsStyleForGlyphWithColors(glyph *Glyph, glyphColors map[string]string, glyp
 		style.Shape = "hexagon"
 		style.Border = jsPhenotypeColor
 	}
+	if className == "interaction" {
+		style.Shape = "ellipse"
+		style.Label = ""
+	}
+	if className == "outcome" {
+		style.Shape = "ellipse"
+		style.Fill = ptrColor(jsNodeBorderColor)
+		style.Label = ""
+	}
+	if className == "variable value" {
+		style.Shape = "stadium_round_rectangle"
+	}
 	if className == "source and sink" {
 		style.Shape = "empty set"
 		style.Border = jsSourceSinkColor
@@ -1519,21 +1532,29 @@ func estimateLabelWidth(label string, fontPx float64) float64 {
 	return math.Max(1.0, float64(len([]rune(strings.TrimSpace(label))))*fontPx*0.6)
 }
 
-// jsArcRenderPoints returns the SBGN start/end points used by sbgnviz edge rscratch.
+// jsArcRenderPoints returns the complete SBGN path used by sbgnviz edge rscratch.
 // Parameters: arc is parsed SBGN; glyphByID and portParentByID validate and resolve topology.
-func jsArcRenderPoints(arc Arc, glyphByID map[string]*Glyph, portParentByID map[string]string) ([2]Point, string, string, bool) {
+func jsArcRenderPoints(arc Arc, glyphByID map[string]*Glyph, portParentByID map[string]string) ([]Point, string, string, bool) {
 	sourceID := jsEndpointGlyphID(arc.Source, portParentByID)
 	targetID := jsEndpointGlyphID(arc.Target, portParentByID)
+	// Explicit coordinates are authoritative and remain drawable when an
+	// endpoint is an outcome, state variable, or arc port rather than a
+	// standalone node.
+	if len(arc.Points) >= 2 {
+		return append([]Point(nil), arc.Points...), sourceID, targetID, true
+	}
 	sourceGlyph := glyphByID[sourceID]
 	targetGlyph := glyphByID[targetID]
-	if sourceGlyph == nil || targetGlyph == nil || sourceGlyph.BBox == nil || targetGlyph.BBox == nil || len(arc.Points) < 2 {
-		return [2]Point{}, "", "", false
+	if sourceGlyph == nil || targetGlyph == nil || sourceGlyph.BBox == nil || targetGlyph.BBox == nil {
+		return nil, "", "", false
 	}
 	if isJSHiddenGlyphClass(sourceGlyph.ClassName) || isJSHiddenGlyphClass(targetGlyph.ClassName) {
-		return [2]Point{}, "", "", false
+		return nil, "", "", false
 	}
-	start := arc.Points[0]
-	end := arc.Points[len(arc.Points)-1]
+	sourceCenter := glyphCenterPoint(sourceGlyph)
+	targetCenter := glyphCenterPoint(targetGlyph)
+	start := jsNodeBoundaryPoint(sourceGlyph, targetCenter)
+	end := jsNodeBoundaryPoint(targetGlyph, sourceCenter)
 	if _, isPort := portParentByID[arc.Source]; isPort && !isCytoscapePortedClass(sourceGlyph.ClassName) {
 		if point, ok := jsNonCytoscapePortEndpoint(sourceGlyph, arc.Source); ok {
 			start = point
@@ -1544,7 +1565,7 @@ func jsArcRenderPoints(arc Arc, glyphByID map[string]*Glyph, portParentByID map[
 			end = point
 		}
 	}
-	return [2]Point{start, end}, sourceID, targetID, true
+	return []Point{start, end}, sourceID, targetID, true
 }
 
 // jsArcMarkerPoint estimates Cytoscape's target arrow tip outside the target node.
@@ -1556,24 +1577,22 @@ func jsArcMarkerPoint(arc Arc, glyphByID map[string]*Glyph, portParentByID map[s
 		return Point{}, false
 	}
 	targetGlyph := glyphByID[targetID]
-	if targetGlyph == nil || targetGlyph.BBox == nil {
-		return Point{}, false
-	}
+	endIndex := len(points) - 1
 	other := points[0]
-	if len(arc.Points) > 2 {
-		other = arc.Points[len(arc.Points)-2]
+	if len(points) > 2 {
+		other = points[endIndex-1]
 	}
 	offset := jsMarkerTipOffsetSource(arc.ClassName)
 	if math.Abs(offset) > 0.0 {
-		dx := points[1].X - other.X
-		dy := points[1].Y - other.Y
+		dx := points[endIndex].X - other.X
+		dy := points[endIndex].Y - other.Y
 		length := math.Hypot(dx, dy)
 		if length > 1e-6 {
-			return Point{X: points[1].X + dx/length*offset, Y: points[1].Y + dy/length*offset}, true
+			return Point{X: points[endIndex].X + dx/length*offset, Y: points[endIndex].Y + dy/length*offset}, true
 		}
 	}
 	_ = targetGlyph
-	return points[1], true
+	return points[endIndex], true
 }
 
 // jsEndpointGlyphID maps a port reference back to its owning glyph for JS topology.
@@ -1770,7 +1789,7 @@ func ellipseBoundaryPointFromRect(rect PixelRect, other Point) Point {
 // Parameters: className is the SBGN arc class.
 func jsArcMarker(className string) string {
 	switch className {
-	case "consumption", "logic arc", "equivalence arc":
+	case "consumption", "interaction", "logic arc", "equivalence arc":
 		return "none"
 	case "inhibition", "negative influence":
 		return "tee"
@@ -2268,12 +2287,24 @@ func parseSBGN(root *xmlElement) ([]Glyph, []Arc, Bounds, error) {
 		for _, node := range childElements(mapNode) {
 			if node.Name == "glyph" {
 				parseGlyphNode(node, "", &glyphs)
+			} else if node.Name == "arcgroup" {
+				for _, groupedNode := range childElements(node) {
+					if groupedNode.Name == "glyph" {
+						parseGlyphNode(groupedNode, "", &glyphs)
+					}
+				}
 			}
 		}
 	}
 
 	var arcs []Arc
 	for _, arcNode := range arcNodes {
+		arcID := elementAttr(arcNode, "id")
+		for _, child := range childElements(arcNode) {
+			if child.Name == "glyph" && elementAttr(child, "class") == "outcome" {
+				parseGlyphNode(child, arcID, &glyphs)
+			}
+		}
 		arc, err := parseArcNode(arcNode)
 		if err != nil {
 			return nil, nil, Bounds{}, err
@@ -2846,11 +2877,13 @@ func (r renderer) drawJSArc(transform *Transform, arc Arc, glyphByID map[string]
 	if !ok {
 		return
 	}
-	start := transform.mapPoint(points[0].X, points[0].Y)
-	end := transform.mapPoint(points[1].X, points[1].Y)
 	path := &canvas.Path{}
+	start := transform.mapPoint(points[0].X, points[0].Y)
 	path.MoveTo(start.X, start.Y)
-	path.LineTo(end.X, end.Y)
+	for _, point := range points[1:] {
+		renderedPoint := transform.mapPoint(point.X, point.Y)
+		path.LineTo(renderedPoint.X, renderedPoint.Y)
+	}
 	edgeColor := styleConfig.edgeColor()
 	r.drawPath(path, nil, &edgeColor, 1.25)
 }
@@ -2869,23 +2902,38 @@ func (r renderer) drawJSArcAuxiliaryGlyphs(transform *Transform, arc Arc) {
 // drawJSArcMarker redraws markers above nodes so arrowheads are not covered by node fills.
 // Parameters: transform maps source coordinates; arc/glyph lookups resolve the rendered endpoint.
 func (r renderer) drawJSArcMarker(transform *Transform, arc Arc, glyphByID map[string]*Glyph, portParentByID map[string]string, auxiliaryRectsByParent map[string][]PixelRect, styleConfig *StyleConfig) {
-	points, _, _, ok := jsArcRenderPoints(arc, glyphByID, portParentByID)
+	points, sourceID, targetID, ok := jsArcRenderPoints(arc, glyphByID, portParentByID)
 	if !ok {
+		return
+	}
+	endIndex := len(points) - 1
+	edgeColor := styleConfig.edgeColor()
+	markerSize := arrowSize * cytoscapeArrowScale
+	if arc.ClassName == "interaction" {
+		triangle := []Point{{X: -0.15, Y: -0.3}, {X: 0, Y: 0}, {X: 0.15, Y: -0.3}}
+		if sourceGlyph := glyphByID[sourceID]; sourceGlyph != nil && sourceGlyph.ClassName == "entity" {
+			end := transform.mapPoint(points[0].X, points[0].Y)
+			previous := transform.mapPoint(points[1].X, points[1].Y)
+			r.drawMarkerPolygon(end, previous, markerSize, triangle, &edgeColor, nil, 0)
+		}
+		if targetGlyph := glyphByID[targetID]; targetGlyph != nil && targetGlyph.ClassName == "entity" {
+			end := transform.mapPoint(points[endIndex].X, points[endIndex].Y)
+			previous := transform.mapPoint(points[endIndex-1].X, points[endIndex-1].Y)
+			r.drawMarkerPolygon(end, previous, markerSize, triangle, &edgeColor, nil, 0)
+		}
 		return
 	}
 	markerPoint, markerOK := jsArcMarkerPoint(arc, glyphByID, portParentByID, auxiliaryRectsByParent)
 	if !markerOK {
-		markerPoint = points[1]
+		markerPoint = points[endIndex]
 	}
-	prevPoint := points[1]
+	prevPoint := points[endIndex]
 	if math.Hypot(markerPoint.X-prevPoint.X, markerPoint.Y-prevPoint.Y) <= 1e-6 {
-		prevPoint = points[0]
+		prevPoint = points[endIndex-1]
 	}
 	start := transform.mapPoint(prevPoint.X, prevPoint.Y)
 	end := transform.mapPoint(markerPoint.X, markerPoint.Y)
-	edgeColor := styleConfig.edgeColor()
 	marker := jsArcMarker(arc.ClassName)
-	markerSize := arrowSize * cytoscapeArrowScale
 	if marker == "triangle" {
 		if arc.ClassName == "production" {
 			r.drawMarkerPolygon(end, start, markerSize, []Point{{X: -0.15, Y: -0.3}, {X: 0, Y: 0}, {X: 0.15, Y: -0.3}}, &edgeColor, nil, 0)

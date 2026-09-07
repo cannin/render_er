@@ -58,6 +58,7 @@
 </g>
 </defs>
 <rect x="-57" y="-35" width="684" height="420" fill="rgb(100%, 100%, 100%)" fill-opacity="1"/>
+<path fill="none" stroke-width="1.25" stroke-linecap="square" stroke-linejoin="miter" stroke="rgb(0%, 0%, 0%)" stroke-opacity="1" stroke-miterlimit="10" d="M 90 84 L 135 158 "/>
 <path fill="none" stroke-width="1.25" stroke-linecap="square" stroke-linejoin="miter" stroke="rgb(0%, 0%, 0%)" stroke-opacity="1" stroke-miterlimit="10" d="M 220 207 L 255 200 "/>
 <path fill="none" stroke-width="1.25" stroke-linecap="square" stroke-linejoin="miter" stroke="rgb(0%, 0%, 0%)" stroke-opacity="1" stroke-miterlimit="10" d="M 291 200 L 310 150 "/>
 <path fill="none" stroke-width="1.25" stroke-linecap="square" stroke-linejoin="miter" stroke="rgb(0%, 0%, 0%)" stroke-opacity="1" stroke-miterlimit="10" d="M 291 200 L 310 265 "/>
@@ -115,6 +116,7 @@
 </g>
 <path fill-rule="nonzero" fill="rgb(100%, 100%, 100%)" fill-opacity="1" stroke-width="1.25" stroke-linecap="square" stroke-linejoin="miter" stroke="rgb(0%, 0%, 0%)" stroke-opacity="1" stroke-miterlimit="10" d="M 291 200 C 291 209.941406 282.941406 218 273 218 C 263.058594 218 255 209.941406 255 200 C 255 190.058594 263.058594 182 273 182 C 282.941406 182 291 190.058594 291 200 "/>
 <path fill-rule="nonzero" fill="rgb(0%, 0%, 0%)" fill-opacity="1" stroke-width="1.25" stroke-linecap="square" stroke-linejoin="miter" stroke="rgb(0%, 0%, 0%)" stroke-opacity="1" stroke-miterlimit="10" d="M 129 125 C 129 129.417969 125.417969 133 121 133 C 116.582031 133 113 129.417969 113 125 C 113 120.582031 116.582031 117 121 117 C 125.417969 117 129 120.582031 129 125 "/>
+<path fill-rule="nonzero" fill="rgb(0%, 0%, 0%)" fill-opacity="1" d="M 136.625 160.671875 L 126.328125 154.203125 L 132.667969 154.164062 L 135.621094 148.554688 Z M 136.625 160.671875 "/>
 <path fill-rule="nonzero" fill="rgb(0%, 0%, 0%)" fill-opacity="1" d="M 229.597656 199.535156 L 220 207 L 231.730469 210.199219 Z M 229.597656 199.535156 "/>
 <path fill-rule="nonzero" fill="rgb(0%, 0%, 0%)" fill-opacity="1" d="M 311.21875 162.097656 L 310 150 L 301.054688 158.234375 Z M 311.21875 162.097656 "/>
 <path fill-rule="nonzero" fill="rgb(0%, 0%, 0%)" fill-opacity="1" d="M 301.730469 256.085938 L 310 265 L 312.167969 253.035156 Z M 301.730469 256.085938 "/>

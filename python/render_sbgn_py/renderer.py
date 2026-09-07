@@ -1895,6 +1895,27 @@ def js_arc_path(
     target_id = js_endpoint_glyph_id(arc.target, port_parent_lookup)
     if source_id is None or target_id is None:
         return None
+
+    # Every serialized SBGN arc has authoritative path coordinates.  Keep
+    # those paths even when an endpoint is an auxiliary glyph (for example an
+    # outcome or state variable) rather than a standalone Cytoscape node.
+    # Rejecting such endpoints made valid ER relationships disappear.
+    if len(arc.points) >= 2:
+        points = list(arc.points)
+        for index, reference in ((0, arc.source), (-1, arc.target)):
+            glyph = glyph_lookup.get(
+                port_parent_lookup.get(reference, reference) if reference else ""
+            )
+            if (
+                glyph is not None
+                and reference in port_parent_lookup
+                and not is_ported_glyph_class(glyph.class_name)
+            ):
+                endpoint = js_non_cytoscape_port_endpoint(glyph, reference)
+                if endpoint is not None:
+                    points[index] = endpoint
+        return points, source_id, target_id
+
     source_glyph = glyph_lookup.get(source_id)
     target_glyph = glyph_lookup.get(target_id)
     if source_glyph is None or target_glyph is None:
@@ -1905,20 +1926,6 @@ def js_arc_path(
         target_glyph.class_name
     ):
         return None
-
-    if len(arc.points) >= 2:
-        points = list(arc.points)
-        for index, reference, glyph in (
-            (0, arc.source, source_glyph),
-            (-1, arc.target, target_glyph),
-        ):
-            if reference in port_parent_lookup and not is_ported_glyph_class(
-                glyph.class_name
-            ):
-                endpoint = js_non_cytoscape_port_endpoint(glyph, reference)
-                if endpoint is not None:
-                    points[index] = endpoint
-        return points, source_id, target_id
 
     source_center = glyph_center_point(source_glyph)
     target_center = glyph_center_point(target_glyph)
@@ -2452,7 +2459,12 @@ def sbgnml_basic_render_manifest(
     for glyph in glyphs:
         if glyph.bbox is None:
             continue
-        if glyph.class_name in {"unit of information", "state variable"}:
+        if glyph.class_name in {
+            "unit of information",
+            "state variable",
+            "existence",
+            "location",
+        }:
             if glyph.parent_id is None:
                 continue
             rect = PixelRect(
