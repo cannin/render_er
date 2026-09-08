@@ -12,7 +12,7 @@ R CMD INSTALL r
 
 Package dependencies declared in `DESCRIPTION` are `xml2` and `jsonlite`.
 
-The [project releases](https://github.com/cannin/render_sbgn/releases) include
+The [project releases](https://github.com/cannin/render_er/releases) include
 an installable `renderSbgnR_<version>.tar.gz` source package that has passed
 `R CMD check`. Install it with `R CMD INSTALL renderSbgnR_<version>.tar.gz`.
 

@@ -1565,7 +1565,11 @@ func jsArcRenderPoints(arc Arc, glyphByID map[string]*Glyph, portParentByID map[
 			reversed = append(reversed, points[index])
 		}
 		if other, ok := firstDistinctPoint(reversed, points[last]); ok {
-			points[last] = jsClipExplicitEndpoint(arc.Target, points[last], other, glyphByID, portParentByID)
+			targetGlyph := glyphByID[targetID]
+			logicArcTargetsOutcome := arc.ClassName == "logic arc" && targetGlyph != nil && targetGlyph.ClassName == "outcome"
+			if !logicArcTargetsOutcome {
+				points[last] = jsClipExplicitEndpoint(arc.Target, points[last], other, glyphByID, portParentByID)
+			}
 		}
 		return points, sourceID, targetID, true
 	}
@@ -1581,13 +1585,21 @@ func jsArcRenderPoints(arc Arc, glyphByID map[string]*Glyph, portParentByID map[
 	targetCenter := glyphCenterPoint(targetGlyph)
 	start := jsNodeBoundaryPoint(sourceGlyph, targetCenter)
 	end := jsNodeBoundaryPoint(targetGlyph, sourceCenter)
-	if _, isPort := portParentByID[arc.Source]; isPort && !isCytoscapePortedClass(sourceGlyph.ClassName) {
-		if point, ok := jsNonCytoscapePortEndpoint(sourceGlyph, arc.Source); ok {
+	if _, isPort := portParentByID[arc.Source]; isPort {
+		if isCytoscapePortedClass(sourceGlyph.ClassName) {
+			if point, ok := jsPortPoint(sourceGlyph, arc.Source); ok {
+				start = point
+			}
+		} else if point, ok := jsNonCytoscapePortEndpoint(sourceGlyph, arc.Source); ok {
 			start = point
 		}
 	}
-	if _, isPort := portParentByID[arc.Target]; isPort && !isCytoscapePortedClass(targetGlyph.ClassName) {
-		if point, ok := jsNonCytoscapePortEndpoint(targetGlyph, arc.Target); ok {
+	if _, isPort := portParentByID[arc.Target]; isPort {
+		if isCytoscapePortedClass(targetGlyph.ClassName) {
+			if point, ok := jsPortPoint(targetGlyph, arc.Target); ok {
+				end = point
+			}
+		} else if point, ok := jsNonCytoscapePortEndpoint(targetGlyph, arc.Target); ok {
 			end = point
 		}
 	}
@@ -1649,6 +1661,20 @@ func glyphCenterPoint(glyph *Glyph) Point {
 		return Point{}
 	}
 	return Point{X: glyph.BBox.X + glyph.BBox.W/2.0, Y: glyph.BBox.Y + glyph.BBox.H/2.0}
+}
+
+// jsPortPoint returns the declared endpoint coordinate for a glyph port.
+// Parameters: glyph owns the port; portID identifies the requested port.
+func jsPortPoint(glyph *Glyph, portID string) (Point, bool) {
+	if glyph == nil {
+		return Point{}, false
+	}
+	for _, port := range glyph.Ports {
+		if port.ID == portID {
+			return port.Point, true
+		}
+	}
+	return Point{}, false
 }
 
 func jsNonCytoscapePortEndpoint(glyph *Glyph, portID string) (Point, bool) {
@@ -1753,7 +1779,12 @@ func jsNodeBoundaryPoint(glyph *Glyph, other Point) Point {
 // jsClipExplicitEndpoint clips an endpoint to an overlapping nested symbol first.
 // Parameters: reference is the arc endpoint id; endpoint and other define its direction.
 func jsClipExplicitEndpoint(reference string, endpoint Point, other Point, glyphByID map[string]*Glyph, portParentByID map[string]string) Point {
-	if _, isPort := portParentByID[reference]; isPort {
+	if parentID, isPort := portParentByID[reference]; isPort {
+		if glyph := glyphByID[parentID]; glyph != nil && isCytoscapePortedClass(glyph.ClassName) {
+			if point, ok := jsPortPoint(glyph, reference); ok {
+				return point
+			}
+		}
 		return endpoint
 	}
 	bestDistance := math.Inf(1)

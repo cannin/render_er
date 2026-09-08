@@ -6,8 +6,8 @@
 cargo fmt --manifest-path rust/Cargo.toml -- --check
 cargo clippy --manifest-path rust/Cargo.toml --all-targets --all-features -- -D warnings
 cargo test --manifest-path rust/Cargo.toml
-cargo --manifest-path rust/Cargo.toml run --release -- draw_sbgnml -i examples/reference_card.sbgn -o output/reference_card.svg
-cargo --manifest-path rust/Cargo.toml run --release -- draw_sbgnml -i render_examples/er_all_glyphs.sbgn -o output/er_all_glyphs.svg
+cargo run --manifest-path rust/Cargo.toml --release -- draw_sbgnml -i examples/reference_card.sbgn -o output/reference_card.svg
+cargo run --manifest-path rust/Cargo.toml --release -- draw_sbgnml -i render_examples/er_all_glyphs.sbgn -o output/er_all_glyphs.svg
 uv run python scripts/render_all_figures.py
 ```
 

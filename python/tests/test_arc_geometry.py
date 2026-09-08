@@ -213,7 +213,7 @@ class ArcGeometryTests(unittest.TestCase):
         expected_markers = {
             "assignment": "barbed-arrow",
             "interaction": "none",
-            "absolute stimulation": "double-triangle",
+            "absolute stimulation": "triangle",
             "absolute inhibition": "double-tee",
         }
         for arc_class, expected_marker in expected_markers.items():
@@ -228,7 +228,7 @@ class ArcGeometryTests(unittest.TestCase):
             "interaction": "ellipse",
             "outcome": "ellipse",
             "variable value": "stadium_round_rectangle",
-            "annotation": "annotation",
+            "annotation": "rounded_rectangle",
         }
         glyph = make_glyph("er", 0.0)
         for glyph_class, expected_shape in expected_shapes.items():
@@ -313,8 +313,8 @@ class ArcGeometryTests(unittest.TestCase):
 
         self.assertEqual(points[0], Point(12.0, 5.0))
 
-    def test_delay_arc_clips_to_painted_boundary(self) -> None:
-        """Remove the empty port gap around a delay glyph."""
+    def test_delay_arc_snaps_to_declared_port(self) -> None:
+        """Join an explicit delay arc to its declared port stub."""
 
         self.source.class_name = "delay"
         self.source.ports = [Port(x=5.0, y=-4.0, id="source.1")]
@@ -334,7 +334,7 @@ class ArcGeometryTests(unittest.TestCase):
 
         self.assertIsNotNone(resolved)
         points, _, _ = resolved
-        self.assertEqual(points[0], Point(5.0, -0.625))
+        self.assertEqual(points[0], Point(5.0, -4.0))
 
 
 if __name__ == "__main__":

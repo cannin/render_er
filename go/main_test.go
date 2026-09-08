@@ -141,6 +141,68 @@ func TestJSArcRenderPointsClipsInteriorEndpoints(t *testing.T) {
 	}
 }
 
+// TestJSArcRenderPointsSnapsPortedGlyphEndpointsToPorts verifies explicit
+// paths meet logical-node port stubs instead of stopping at the outer bbox.
+func TestJSArcRenderPointsSnapsPortedGlyphEndpointsToPorts(t *testing.T) {
+	delay := &Glyph{
+		ID: "delay", ClassName: "delay", BBox: &BBox{X: 20, Y: 20, W: 42, H: 42},
+		Ports: []Port{
+			{ID: "delay.in", Point: Point{X: 62, Y: 41}},
+			{ID: "delay.out", Point: Point{X: 20, Y: 41}},
+		},
+	}
+	target := &Glyph{ID: "target", ClassName: "process", BBox: &BBox{X: 0, Y: 80, W: 20, H: 20}}
+	glyphs := map[string]*Glyph{"delay": delay, "target": target}
+	ports := map[string]string{"delay.in": "delay", "delay.out": "delay"}
+
+	incoming := Arc{
+		ID: "incoming", ClassName: "logic arc", Source: "target", Target: "delay.in",
+		Points: []Point{{X: 10, Y: 90}, {X: 41, Y: 41}},
+	}
+	incomingPoints, _, _, ok := jsArcRenderPoints(incoming, glyphs, ports)
+	if !ok {
+		t.Fatal("jsArcRenderPoints() rejected an incoming delay arc")
+	}
+	if incomingPoints[len(incomingPoints)-1] != (Point{X: 62, Y: 41}) {
+		t.Fatalf("incoming delay endpoint = %#v, want declared input port", incomingPoints[len(incomingPoints)-1])
+	}
+
+	outgoing := Arc{
+		ID: "outgoing", ClassName: "necessary stimulation", Source: "delay.out", Target: "target",
+		Points: []Point{{X: 41, Y: 41}, {X: 10, Y: 90}},
+	}
+	outgoingPoints, _, _, ok := jsArcRenderPoints(outgoing, glyphs, ports)
+	if !ok {
+		t.Fatal("jsArcRenderPoints() rejected an outgoing delay arc")
+	}
+	if outgoingPoints[0] != (Point{X: 20, Y: 41}) {
+		t.Fatalf("outgoing delay endpoint = %#v, want declared output port", outgoingPoints[0])
+	}
+}
+
+// TestJSLogicArcReachesOutcomeCenter verifies converging logical inputs retain
+// an explicit center endpoint instead of being clipped to the outcome circle.
+func TestJSLogicArcReachesOutcomeCenter(t *testing.T) {
+	source := &Glyph{ID: "source", ClassName: "state variable", BBox: &BBox{X: 0, Y: 0, W: 20, H: 20}}
+	outcome := &Glyph{ID: "outcome", ClassName: "outcome", BBox: &BBox{X: 40, Y: 30, W: 20, H: 20}}
+	arc := Arc{
+		ID: "logic", ClassName: "logic arc", Source: "source", Target: "outcome",
+		Points: []Point{{X: 10, Y: 20}, {X: 50, Y: 40}},
+	}
+
+	points, _, _, ok := jsArcRenderPoints(
+		arc,
+		map[string]*Glyph{"source": source, "outcome": outcome},
+		map[string]string{},
+	)
+	if !ok {
+		t.Fatal("jsArcRenderPoints() rejected an outcome-targeting logic arc")
+	}
+	if points[len(points)-1] != (Point{X: 50, Y: 40}) {
+		t.Fatalf("logic arc outcome endpoint = %#v, want explicit center", points[len(points)-1])
+	}
+}
+
 // TestJSArcRenderPointsClipsNestedAuxiliaryEndpoint verifies connections stop
 // at an ER auxiliary symbol that overlaps its referenced parent entity.
 func TestJSArcRenderPointsClipsNestedAuxiliaryEndpoint(t *testing.T) {

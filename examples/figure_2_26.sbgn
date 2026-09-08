@@ -1,0 +1,48 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<sbgn xmlns="http://sbgn.org/libsbgn/0.3">
+  <map language="entity relationship" id="figure_2_26">
+    <glyph id="value_true" class="state variable">
+      <state value="T"/>
+      <bbox x="586" y="235" w="27" h="27"/>
+    </glyph>
+    <glyph id="value_false" class="state variable">
+      <state value="F"/>
+      <bbox x="682" y="235" w="27" h="27"/>
+    </glyph>
+    <glyph id="value_merge" class="implicit xor">
+      <bbox x="648" y="312" w="0" h="0"/>
+    </glyph>
+    <glyph id="camkii" class="entity">
+      <label text="CaMKII"/>
+      <bbox x="582" y="441" w="227" h="75"/>
+      <glyph id="p_t286" class="state variable">
+        <state value="P" variable="T286"/>
+        <bbox x="609" y="426" w="75" h="28"/>
+      </glyph>
+      <glyph id="trans_label" class="unit of information">
+        <label text="trans"/>
+        <bbox x="469" y="433" w="53" h="30"/>
+      </glyph>
+    </glyph>
+    <arc id="true_branch" class="assignment" source="value_true" target="value_merge">
+      <port id="necessary_stimulation_target" x="620" y="283"/>
+      <start x="600" y="262"/>
+      <end x="648" y="312"/>
+    </arc>
+    <arc id="false_branch" class="assignment" source="value_false" target="value_merge">
+      <start x="696" y="262"/>
+      <end x="648" y="312"/>
+    </arc>
+    <arc id="boolean_assignment" class="assignment" source="value_merge" target="p_t286">
+      <start x="648" y="312"/>
+      <end x="648" y="426"/>
+    </arc>
+    <arc id="trans_necessary_stimulation" class="necessary stimulation" source="camkii" target="necessary_stimulation_target">
+      <start x="582" y="479"/>
+      <next x="495" y="479"/>
+      <next x="495" y="350"/>
+      <next x="583" y="350"/>
+      <end x="620" y="283"/>
+    </arc>
+  </map>
+</sbgn>

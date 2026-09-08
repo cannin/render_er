@@ -47,9 +47,7 @@ def parse_args() -> argparse.Namespace:
         "--input_path",
         "--input",
         dest="input_path",
-        default=(
-            "/workspace/examples/sbgn/" "regulation_of_tgfbeta-induced_metastasis.sbgn"
-        ),
+        required=True,
         help="Input SBGNML file path.",
     )
     draw_sbgnml.add_argument(

@@ -1,0 +1,99 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<sbgn xmlns="http://sbgn.org/libsbgn/0.3">
+  <map language="entity relationship" id="figure_2_17">
+    <glyph id="value_p" class="state variable">
+      <state value="P"/>
+      <bbox x="736" y="305" w="27" h="27"/>
+    </glyph>
+    <glyph id="or_operator" class="or">
+      <bbox x="826" y="367" w="22" h="22"/>
+    </glyph>
+    <glyph id="camkii" class="entity">
+      <label text="CaMKII"/>
+      <bbox x="582" y="441" w="227" h="75"/>
+      <glyph id="t306" class="state variable">
+        <state variable="T306"/>
+        <bbox x="720" y="426" w="61" h="28"/>
+      </glyph>
+    </glyph>
+    <glyph id="binding" class="interaction">
+      <bbox x="900" y="579" w="61" h="61"/>
+      <port id="binding_trans_target" x="900" y="588"/>
+      <port id="binding_phosphorylation_target" x="961" y="588"/>
+    </glyph>
+    <glyph id="cam" class="entity">
+      <label text="CaM"/>
+      <bbox x="1041" y="572" w="124" h="76"/>
+      <glyph id="cam_type" class="unit of information">
+        <label text="mt:prot"/>
+        <bbox x="1070" y="634" w="70" h="27"/>
+      </glyph>
+    </glyph>
+    <arc id="phosphorylation_assignment" class="assignment" source="value_p" target="t306">
+      <glyph id="phosphorylation_outcome" class="outcome">
+        <bbox x="745" y="345" w="10" h="10"/>
+      </glyph>
+      <port id="phosphorylation_inhibition_target" x="750" y="378"/>
+      <start x="750" y="332"/>
+      <end x="750" y="426"/>
+    </arc>
+    <arc id="trans_interaction" class="assignment" source="camkii" target="camkii">
+      <glyph id="trans_outcome_top" class="outcome">
+        <bbox x="843" y="453" w="10" h="10"/>
+      </glyph>
+      <glyph id="trans_outcome_bottom" class="outcome">
+        <bbox x="843" y="496" w="10" h="10"/>
+      </glyph>
+      <glyph id="trans_label" class="cardinality">
+        <label text="trans"/>
+        <bbox x="850" y="468" w="50" h="22"/>
+      </glyph>
+      <start x="809" y="458"/>
+      <next x="870" y="458"/>
+      <next x="870" y="501"/>
+      <end x="809" y="501"/>
+    </arc>
+    <arc id="trans_interaction_reverse" class="assignment" source="camkii" target="camkii">
+      <start x="809" y="501"/>
+      <next x="870" y="501"/>
+      <next x="870" y="458"/>
+      <end x="809" y="458"/>
+    </arc>
+    <arc id="binding_to_camkii" class="assignment" source="binding" target="camkii">
+      <glyph id="binding_outcome" class="outcome">
+        <bbox x="926" y="574" w="10" h="10"/>
+      </glyph>
+      <start x="900" y="610"/>
+      <next x="778" y="610"/>
+      <end x="778" y="516"/>
+    </arc>
+    <arc id="binding_to_cam" class="assignment" source="binding" target="cam">
+      <start x="961" y="610"/>
+      <end x="1041" y="610"/>
+    </arc>
+    <arc id="trans_logic" class="logic arc" source="trans_outcome_top" target="or_operator">
+      <start x="848" y="453"/>
+      <end x="848" y="378"/>
+    </arc>
+    <arc id="binding_logic" class="logic arc" source="binding_outcome" target="or_operator">
+      <start x="931" y="574"/>
+      <next x="931" y="378"/>
+      <end x="848" y="378"/>
+    </arc>
+    <arc id="interaction_inhibits_assignment" class="absolute inhibition" source="or_operator" target="phosphorylation_inhibition_target">
+      <start x="826" y="378"/>
+      <end x="750" y="378"/>
+    </arc>
+    <arc id="trans_inhibits_binding" class="absolute inhibition" source="trans_outcome_bottom" target="binding_trans_target">
+      <start x="848" y="506"/>
+      <next x="848" y="542"/>
+      <end x="900" y="588"/>
+    </arc>
+    <arc id="phosphorylation_inhibits_binding" class="inhibition" source="phosphorylation_outcome" target="binding_phosphorylation_target">
+      <start x="750" y="350"/>
+      <next x="980" y="350"/>
+      <next x="980" y="570"/>
+      <end x="961" y="588"/>
+    </arc>
+  </map>
+</sbgn>

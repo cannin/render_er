@@ -22,8 +22,10 @@ DEFAULT_LINE_WIDTH = 1.5
 FONT_FAMILY = "Liberation Sans"
 ARROW_SIZE = 8.0
 CYTOSCAPE_ARROW_SCALE = 4.53125
+JS_LOGICAL_NODE_SIZE = 21.0
 
-BORDER_COLOR = (0.0, 0.0, 0.0)
+JS_BORDER_COLOR = (0x55 / 255.0, 0x55 / 255.0, 0x55 / 255.0)
+BORDER_COLOR = JS_BORDER_COLOR
 JS_NODE_FILL_COLOR = (1.0, 1.0, 1.0)
 JS_NODE_BORDER_COLOR = BORDER_COLOR
 JS_NODE_TEXT_COLOR = (0.0, 0.0, 0.0)
@@ -44,6 +46,7 @@ JS_GLYPH_COLOR_BORDER_WIDTH = 2.4
 JS_DEFAULT_EDGE_WIDTH = 1.25
 JS_NODE_FONT_PX = 12.0
 JS_COMPARTMENT_FONT_PX = 12.0
+JS_AUXILIARY_BORDER_WIDTH = 1.4
 StyleConfig = dict[str, Any]
 
 
@@ -190,6 +193,121 @@ def parse_bbox(node: ET.Element) -> Optional[BBox]:
     if x is None or y is None or w is None or h is None:
         return None
     return BBox(x=x, y=y, w=w, h=h)
+
+
+def parse_color_value(
+    value: str, colors: dict[str, tuple[float, float, float, float]]
+) -> Optional[tuple[float, float, float, float]]:
+    """Resolve a renderInformation color ID or hexadecimal literal.
+
+    Args:
+        value: Color definition ID or CSS-style hexadecimal color.
+        colors: Previously parsed color definitions.
+
+    Returns:
+        Normalized RGBA channels, or None for an unsupported value.
+    """
+
+    normalized = value.strip()
+    if not normalized or normalized.lower() == "none":
+        return None
+    if normalized in colors:
+        return colors[normalized]
+    if not normalized.startswith("#"):
+        return None
+    digits = normalized[1:]
+    if len(digits) in {3, 4}:
+        digits = "".join(character * 2 for character in digits)
+    if len(digits) not in {6, 8}:
+        return None
+    try:
+        channels = [
+            int(digits[index : index + 2], 16) / 255.0
+            for index in range(0, len(digits), 2)
+        ]
+    except ValueError:
+        return None
+    if len(channels) == 3:
+        channels.append(1.0)
+    return tuple(channels)  # type: ignore[return-value]
+
+
+def parse_render_information(path: Path) -> dict[str, Any]:
+    """Parse optional SBGN renderInformation colors and styles.
+
+    Args:
+        path: SBGN-ML document path.
+
+    Returns:
+        Background color, color definitions, default style, and ID styles.
+    """
+
+    root = ET.parse(path).getroot()
+    render_node = next(
+        (node for node in root.iter() if strip_tag(node.tag) == "renderInformation"),
+        None,
+    )
+    info: dict[str, Any] = {
+        "background_color": None,
+        "default_style": None,
+        "styles": {},
+        "colors": {},
+    }
+    if render_node is None:
+        return info
+
+    colors: dict[str, tuple[float, float, float, float]] = info["colors"]
+    for node in render_node.iter():
+        if strip_tag(node.tag) != "colorDefinition":
+            continue
+        color_id = node.get("id", "")
+        color = parse_color_value(node.get("value", ""), colors)
+        if color_id and color is not None:
+            colors[color_id] = color
+
+    background = parse_color_value(render_node.get("background-color", ""), colors)
+    if background is not None:
+        info["background_color"] = background
+
+    for style_node in render_node.iter():
+        if strip_tag(style_node.tag) != "style":
+            continue
+        graphics_node = next(
+            (child for child in style_node if strip_tag(child.tag) == "g"), None
+        )
+        style: dict[str, Any] = {}
+        if graphics_node is not None:
+            numeric_attributes = {
+                "font-size": "font_size",
+                "stroke-width": "stroke_width",
+                "background-opacity": "background_opacity",
+            }
+            color_attributes = {
+                "font-color": "font_color",
+                "stroke": "stroke_color",
+                "fill": "fill_color",
+            }
+            for xml_name, key in numeric_attributes.items():
+                parsed = parse_float(graphics_node.get(xml_name))
+                if parsed is not None:
+                    style[key] = parsed
+            font_family = graphics_node.get("font-family")
+            if font_family:
+                style["font_family"] = font_family
+            for xml_name, key in color_attributes.items():
+                parsed_color = parse_color_value(
+                    graphics_node.get(xml_name, ""), colors
+                )
+                if parsed_color is not None:
+                    style[key] = parsed_color
+
+        identifiers = style_node.get("idList", "").split()
+        if not identifiers:
+            info["default_style"] = style
+        else:
+            for identifier in identifiers:
+                info["styles"][identifier] = dict(style)
+    return info
 
 
 def parse_glyph_node(
@@ -385,25 +503,17 @@ def parse_sbgnml(path: Path) -> Tuple[List[Glyph], List[Arc], Bounds]:
 def compute_bounds(glyphs: Sequence[Glyph], arcs: Sequence[Arc]) -> Bounds:
     """Compute JS-rendered primitive bounds from visible glyph bboxes."""
 
+    del arcs
     x_values: List[float] = []
     y_values: List[float] = []
 
     for glyph in glyphs:
-        if glyph.bbox is not None and not is_js_hidden_glyph_class(glyph.class_name):
+        if glyph.bbox is not None and (
+            not is_js_hidden_glyph_class(glyph.class_name)
+            or is_auxiliary_glyph_class(glyph.class_name)
+        ):
             x_values.extend([glyph.bbox.x, glyph.bbox.x + glyph.bbox.w])
             y_values.extend([glyph.bbox.y, glyph.bbox.y + glyph.bbox.h])
-        if glyph.callout is not None:
-            x_values.append(glyph.callout.x)
-            y_values.append(glyph.callout.y)
-
-    for arc in arcs:
-        for point in arc.points:
-            x_values.append(point.x)
-            y_values.append(point.y)
-        for glyph in arc.auxiliary_glyphs:
-            if glyph.bbox is not None:
-                x_values.extend([glyph.bbox.x, glyph.bbox.x + glyph.bbox.w])
-                y_values.extend([glyph.bbox.y, glyph.bbox.y + glyph.bbox.h])
 
     if not x_values or not y_values:
         raise ValueError("No coordinates found in SBGN file")
@@ -483,6 +593,7 @@ def sbgnviz_port_span(glyph: Glyph) -> Optional[float]:
         "and",
         "or",
         "not",
+        "delay",
     }
     if glyph.class_name not in ported_classes or len(glyph.ports) < 2:
         return None
@@ -536,10 +647,15 @@ def sbgnviz_manifest_rect(glyph: Glyph) -> PixelRect:
 # Cairo helpers
 
 
-def setup_context(ctx: cairo.Context) -> None:
+def setup_context(
+    ctx: cairo.Context, background_color: Sequence[float] = (1.0, 1.0, 1.0, 1.0)
+) -> None:
     """Initialize the Cairo context with defaults."""
 
-    ctx.set_source_rgb(1.0, 1.0, 1.0)
+    if len(background_color) >= 4:
+        ctx.set_source_rgba(*background_color[:4])
+    else:
+        ctx.set_source_rgb(*background_color[:3])
     ctx.paint()
     ctx.set_source_rgb(*BORDER_COLOR)
     ctx.set_line_width(DEFAULT_LINE_WIDTH)
@@ -547,22 +663,30 @@ def setup_context(ctx: cairo.Context) -> None:
 
 
 def create_png_surface(
-    width: int, height: int
+    width: int,
+    height: int,
+    background_color: Sequence[float] = (1.0, 1.0, 1.0, 1.0),
 ) -> Tuple[cairo.ImageSurface, cairo.Context]:
     """Create a Cairo image surface and context."""
 
     surface = cairo.ImageSurface(cairo.Format.ARGB32, width, height)
     ctx = cairo.Context(surface)
-    setup_context(ctx)
+    setup_context(ctx, background_color)
     return surface, ctx
 
 
-def render_svg(svg_path: Path, width: float, height: float, render_fn) -> None:
+def render_svg(
+    svg_path: Path,
+    width: float,
+    height: float,
+    render_fn,
+    background_color: Sequence[float] = (1.0, 1.0, 1.0, 1.0),
+) -> None:
     """Render to an SVG surface using Cairo."""
 
     surface = cairo.SVGSurface(str(svg_path), width, height)
     ctx = cairo.Context(surface)
-    setup_context(ctx)
+    setup_context(ctx, background_color)
     render_fn(ctx)
     surface.finish()
 
@@ -881,7 +1005,24 @@ def is_ported_glyph_class(class_name: str) -> bool:
         "uncertain process",
         "association",
         "dissociation",
+        "and",
+        "or",
+        "not",
+        "delay",
     }
+
+
+def is_logical_operator_class(class_name: str) -> bool:
+    """Return whether a glyph uses the common 21-unit logical core.
+
+    Args:
+        class_name: SBGN glyph class name.
+
+    Returns:
+        True for logical operator classes.
+    """
+
+    return class_name in {"and", "or", "not", "delay"}
 
 
 def port_orientation(glyph: Glyph) -> str:
@@ -895,20 +1036,50 @@ def port_orientation(glyph: Glyph) -> str:
     return "horizontal"
 
 
-def path_ported_glyph(ctx: cairo.Context, rect: PixelRect, glyph: Glyph) -> None:
-    """Add the sbgnviz process/logical operator polygon with port stubs."""
+def ported_glyph_core_rect(
+    rect: PixelRect, glyph: Glyph, transform: Optional[Transform]
+) -> PixelRect:
+    """Return the core rectangle inside a complete port-span rectangle.
 
-    orientation = port_orientation(glyph)
-    core_type = "rectangle" if "process" in glyph.class_name else "circle"
+    Args:
+        rect: Full rendered rectangle including port stubs.
+        glyph: Process or logical glyph.
+        transform: Source-to-rendered transform.
+
+    Returns:
+        Rendered core rectangle.
+    """
+
     core_width = rect.width * 0.707071
     core_height = rect.height * 0.707071
-    core = PixelRect(
+    if is_logical_operator_class(glyph.class_name) and transform is not None:
+        core_width = transform.scale_scalar(JS_LOGICAL_NODE_SIZE)
+        core_height = core_width
+    return PixelRect(
         rect.center.x - core_width / 2.0,
         rect.center.y - core_height / 2.0,
         core_width,
         core_height,
         rect.center,
     )
+
+
+def path_ported_glyph(
+    ctx: cairo.Context,
+    rect: PixelRect,
+    glyph: Glyph,
+    transform: Optional[Transform] = None,
+) -> None:
+    """Add the sbgnviz process/logical operator polygon with port stubs."""
+
+    orientation = port_orientation(glyph)
+    core_type = (
+        "circle"
+        if glyph.class_name in {"association", "dissociation"}
+        or is_logical_operator_class(glyph.class_name)
+        else "rectangle"
+    )
+    core = ported_glyph_core_rect(rect, glyph, transform)
     points: list[Point] = []
     if orientation == "horizontal":
         line_half_height = max(rect.height * 0.01, 0.5) / 2.0
@@ -1161,6 +1332,10 @@ def auxiliary_glyph_shape(glyph: Glyph) -> str:
     """
 
     if glyph.class_name == "state variable":
+        if glyph.parent_id is None:
+            if glyph.bbox is not None and abs(glyph.bbox.w - glyph.bbox.h) > 1e-6:
+                return "stadium_round_rectangle"
+            return "ellipse"
         return "stadium_round_rectangle"
     if glyph.class_name in {"existence", "location"}:
         return "ellipse"
@@ -1187,7 +1362,9 @@ def draw_auxiliary_glyph(
         "location",
     }:
         return False
-    if glyph.parent_id is None or glyph.bbox is None:
+    if glyph.bbox is None:
+        return False
+    if glyph.parent_id is None and glyph.class_name != "state variable":
         return True
     rect = bbox_pixel_rect(transform, glyph.bbox)
     if glyph.class_name in {"existence", "location"}:
@@ -1217,7 +1394,7 @@ def draw_auxiliary_glyph(
     ctx.set_source_rgb(1.0, 1.0, 1.0)
     ctx.fill_preserve()
     ctx.set_source_rgb(*BORDER_COLOR)
-    ctx.set_line_width(JS_DEFAULT_NODE_BORDER_WIDTH)
+    ctx.set_line_width(JS_AUXILIARY_BORDER_WIDTH)
     ctx.stroke()
     if glyph.class_name == "existence":
         ctx.save()
@@ -1229,16 +1406,14 @@ def draw_auxiliary_glyph(
         ctx.restore()
         path_ellipse(ctx, rect)
         ctx.set_source_rgb(*JS_NODE_BORDER_COLOR)
-        ctx.set_line_width(JS_DEFAULT_NODE_BORDER_WIDTH)
+        ctx.set_line_width(JS_AUXILIARY_BORDER_WIDTH)
         ctx.stroke()
     elif glyph.class_name == "location":
-        diagonal_radius = rect.width / 2.0 / math.sqrt(2.0)
         ctx.set_source_rgb(*JS_NODE_BORDER_COLOR)
-        ctx.set_line_width(JS_DEFAULT_NODE_BORDER_WIDTH)
-        ctx.move_to(rect.center.x - diagonal_radius, rect.center.y - diagonal_radius)
-        ctx.line_to(rect.center.x + diagonal_radius, rect.center.y + diagonal_radius)
-        ctx.move_to(rect.center.x - diagonal_radius, rect.center.y + diagonal_radius)
-        ctx.line_to(rect.center.x + diagonal_radius, rect.center.y - diagonal_radius)
+        ctx.set_line_width(JS_AUXILIARY_BORDER_WIDTH)
+        for start, end in location_cross_lines(rect):
+            ctx.move_to(start.x, start.y)
+            ctx.line_to(end.x, end.y)
         ctx.stroke()
     if glyph.class_name == "state variable":
         text = "@".join(
@@ -1257,6 +1432,48 @@ def draw_auxiliary_glyph(
             JS_NODE_TEXT_COLOR,
         )
     return True
+
+
+def location_cross_lines(
+    rect: PixelRect,
+) -> tuple[tuple[Point, Point], tuple[Point, Point]]:
+    """Return the truncated diagonal and offset chord for a location glyph.
+
+    Args:
+        rect: Circular location-glyph bounds.
+
+    Returns:
+        Centered diagonal and opposite-slope chord endpoints.
+    """
+
+    radius = min(rect.width, rect.height) / 2.0
+    diagonal_radius = radius * math.sqrt(0.5)
+    chord_offset = radius / 3.0
+    chord_midpoint = Point(
+        rect.center.x - chord_offset * math.sqrt(0.5),
+        rect.center.y - chord_offset * math.sqrt(0.5),
+    )
+    chord_half_length = math.sqrt(radius * radius - chord_offset * chord_offset)
+    chord_delta = chord_half_length * math.sqrt(0.5)
+    return (
+        (
+            chord_midpoint,
+            Point(
+                rect.center.x + diagonal_radius,
+                rect.center.y + diagonal_radius,
+            ),
+        ),
+        (
+            Point(
+                chord_midpoint.x - chord_delta,
+                chord_midpoint.y + chord_delta,
+            ),
+            Point(
+                chord_midpoint.x + chord_delta,
+                chord_midpoint.y - chord_delta,
+            ),
+        ),
+    )
 
 
 def draw_arc_auxiliary_glyphs(
@@ -1310,6 +1527,67 @@ def draw_inhibition_bar(
     ctx.stroke()
 
 
+def point_before_endpoint(
+    end: Point, previous: Point, distance: float
+) -> Optional[Point]:
+    """Move from an endpoint toward its previous path point.
+
+    Args:
+        end: Arc endpoint.
+        previous: Previous point on the arc.
+        distance: Distance to move back from the endpoint.
+
+    Returns:
+        Shifted point, or None for a zero-length direction.
+    """
+
+    dx = end.x - previous.x
+    dy = end.y - previous.y
+    length = math.hypot(dx, dy)
+    if length <= 1e-6:
+        return None
+    return Point(
+        end.x - dx / length * distance,
+        end.y - dy / length * distance,
+    )
+
+
+def absolute_inhibition_bar_offsets(marker_size: float) -> tuple[float, float]:
+    """Return front and rear tee offsets with equal target/inter-bar gaps.
+
+    Args:
+        marker_size: Full Cytoscape marker size.
+
+    Returns:
+        Front and rear offsets from the target.
+    """
+
+    gap = marker_size * 0.12
+    return gap, gap * 2.0
+
+
+def absolute_inhibition_connector(
+    end: Point, previous: Point, marker_size: float
+) -> Optional[tuple[Point, Point]]:
+    """Return the centered segment joining absolute-inhibition bars.
+
+    Args:
+        end: Marker contact point.
+        previous: Previous arc point.
+        marker_size: Full Cytoscape marker size.
+
+    Returns:
+        Connector endpoints, or None for a zero-length direction.
+    """
+
+    front_offset, rear_offset = absolute_inhibition_bar_offsets(marker_size)
+    front = point_before_endpoint(end, previous, front_offset)
+    rear = point_before_endpoint(end, previous, rear_offset)
+    if front is None or rear is None:
+        return None
+    return front, rear
+
+
 def render_sbgnml(
     ctx: cairo.Context,
     transform: Transform,
@@ -1320,6 +1598,7 @@ def render_sbgnml(
     glyph_color_type: str = "label",
     auto_contrast_text: bool = True,
     style_config: Optional[StyleConfig] = None,
+    background_color: Sequence[float] = (1.0, 1.0, 1.0, 1.0),
 ) -> None:
     """Render parsed SBGNML using the JS renderer's primitive mapping."""
 
@@ -1333,6 +1612,9 @@ def render_sbgnml(
         for port in glyph.ports:
             if port.id:
                 port_parent_lookup[port.id] = glyph.id
+    layout_rects = cytoscape_layout_rects(
+        glyphs, glyph_lookup, glyph_colors, glyph_color_type
+    )
 
     for glyph in glyphs:
         if glyph.class_name == "compartment" and glyph_lookup.get(glyph.id) is glyph:
@@ -1344,6 +1626,7 @@ def render_sbgnml(
                 glyph_color_type,
                 auto_contrast_text,
                 style_config,
+                layout_rects.get(glyph.id),
             )
 
     for arc in arcs:
@@ -1359,6 +1642,7 @@ def render_sbgnml(
                 glyph_color_type,
                 auto_contrast_text,
                 style_config,
+                layout_rects.get(glyph.id),
             )
 
     for arc in arcs:
@@ -1369,6 +1653,7 @@ def render_sbgnml(
             glyph_lookup,
             port_parent_lookup,
             style_config,
+            background_color,
         )
 
     for arc in arcs:
@@ -1394,8 +1679,25 @@ def is_js_hidden_glyph_class(class_name: str) -> bool:
         "existence",
         "location",
         "implicit xor",
-        "influence target",
         "terminal",
+    }
+
+
+def is_auxiliary_glyph_class(class_name: str) -> bool:
+    """Return whether a glyph uses the auxiliary rendering path.
+
+    Args:
+        class_name: SBGN glyph class name.
+
+    Returns:
+        True for an auxiliary glyph class.
+    """
+
+    return class_name in {
+        "unit of information",
+        "state variable",
+        "existence",
+        "location",
     }
 
 
@@ -1600,11 +1902,11 @@ def js_glyph_style(
     if "process" in class_name or class_name in {
         "association",
         "dissociation",
+        "and",
+        "or",
+        "not",
     }:
         style["shape"] = "polygon"
-        style["border"] = JS_PROCESS_BORDER_COLOR
-    if class_name in {"and", "or", "not", "delay"}:
-        style["shape"] = "ellipse"
         style["border"] = JS_PROCESS_BORDER_COLOR
     if class_name == "submap":
         style["shape"] = "rectangle"
@@ -1624,8 +1926,6 @@ def js_glyph_style(
         style["label"] = ""
     if class_name == "variable value":
         style["shape"] = "stadium_round_rectangle"
-    if class_name == "annotation":
-        style["shape"] = "annotation"
     if class_name == "source and sink":
         style["shape"] = "empty set"
         style["border"] = JS_SOURCE_SINK_BORDER_COLOR
@@ -1838,7 +2138,14 @@ def js_clip_explicit_endpoint(
         Endpoint on the first intersected glyph border.
     """
 
-    if reference is None or reference in port_parent_lookup:
+    if reference is None:
+        return endpoint
+    if reference in port_parent_lookup:
+        owner = glyph_lookup.get(port_parent_lookup[reference])
+        if owner is not None and is_ported_glyph_class(owner.class_name):
+            port = next((item for item in owner.ports if item.id == reference), None)
+            if port is not None:
+                return Point(port.x, port.y)
         return endpoint
     nested_boundaries = [
         js_node_boundary_point(glyph, other)
@@ -1870,8 +2177,6 @@ def js_arc_marker(class_name: str) -> str:
         return "none"
     if class_name == "assignment":
         return "barbed-arrow"
-    if class_name == "production":
-        return "filled-triangle"
     if class_name in {"inhibition", "negative influence"}:
         return "tee"
     if class_name == "absolute inhibition":
@@ -1882,22 +2187,61 @@ def js_arc_marker(class_name: str) -> str:
         return "diamond"
     if class_name == "necessary stimulation":
         return "triangle-cross"
-    if class_name == "absolute stimulation":
-        return "double-triangle"
     return "triangle"
+
+
+def js_arc_marker_for_endpoints(
+    arc: Arc,
+    glyph_lookup: dict[str, Glyph],
+    port_parent_lookup: dict[str, str],
+) -> str:
+    """Return a marker after applying endpoint-specific ER suppression.
+
+    Args:
+        arc: Parsed arc.
+        glyph_lookup: Glyphs indexed by identifier.
+        port_parent_lookup: Port identifiers mapped to owning glyphs.
+
+    Returns:
+        Marker name for the target endpoint.
+    """
+
+    marker = js_arc_marker(arc.class_name)
+    target_id = js_endpoint_glyph_id(arc.target, port_parent_lookup)
+    target = glyph_lookup.get(target_id or "")
+    if marker == "barbed-arrow" and target is not None:
+        if target.class_name == "implicit xor":
+            return "none"
+    return marker
+
+
+def js_arc_endpoint_markers(
+    arc: Arc,
+    glyph_lookup: dict[str, Glyph],
+    port_parent_lookup: dict[str, str],
+) -> tuple[str, str]:
+    """Return source and target markers for a pure ER relationship.
+
+    Args:
+        arc: Parsed arc.
+        glyph_lookup: Glyphs indexed by identifier.
+        port_parent_lookup: Port identifiers mapped to owning glyphs.
+
+    Returns:
+        Source and target marker names.
+    """
+
+    marker = js_arc_marker_for_endpoints(arc, glyph_lookup, port_parent_lookup)
+    if arc.class_name == "interaction":
+        return "none", "none"
+    return "none", marker
 
 
 def js_marker_tip_offset_source(class_name: str) -> float:
     """Return Go-compatible marker-tip displacement in source units."""
 
     marker = js_arc_marker(class_name)
-    if marker in {
-        "barbed-arrow",
-        "triangle",
-        "filled-triangle",
-        "triangle-cross",
-        "double-triangle",
-    }:
+    if marker in {"triangle", "triangle-cross"}:
         return 3.125
     if marker == "circle":
         return -2.3125
@@ -1906,7 +2250,12 @@ def js_marker_tip_offset_source(class_name: str) -> float:
     return 0.0
 
 
-def js_arc_marker_point(arc: Arc, path_points: Sequence[Point]) -> Point:
+def js_arc_marker_point(
+    arc: Arc,
+    path_points: Sequence[Point],
+    glyph_lookup: Optional[dict[str, Glyph]] = None,
+    port_parent_lookup: Optional[dict[str, str]] = None,
+) -> Point:
     """Return the marker tip displaced to eliminate target-node seams.
 
     Args:
@@ -1918,6 +2267,10 @@ def js_arc_marker_point(arc: Arc, path_points: Sequence[Point]) -> Point:
     """
 
     end = path_points[-1]
+    if glyph_lookup is not None:
+        target_id = js_endpoint_glyph_id(arc.target, port_parent_lookup or {})
+        if target_id not in glyph_lookup:
+            return end
     other = path_points[-2] if len(path_points) > 2 else path_points[0]
     offset = js_marker_tip_offset_source(arc.class_name)
     dx = end.x - other.x
@@ -1982,35 +2335,30 @@ def js_arc_path(
             glyph = glyph_lookup.get(
                 port_parent_lookup.get(reference, reference) if reference else ""
             )
-            if (
-                glyph is not None
-                and reference in port_parent_lookup
-                and not is_ported_glyph_class(glyph.class_name)
-            ):
-                endpoint = js_non_cytoscape_port_endpoint(glyph, reference)
-                if endpoint is not None:
-                    points[index] = endpoint
-            else:
-                candidate_points = points[1:] if index == 0 else reversed(points[:-1])
-                other = next(
-                    (
-                        point
-                        for point in candidate_points
-                        if math.hypot(
-                            point.x - points[index].x, point.y - points[index].y
-                        )
-                        > 1e-6
-                    ),
-                    None,
+            candidate_points = points[1:] if index == 0 else reversed(points[:-1])
+            other = next(
+                (
+                    point
+                    for point in candidate_points
+                    if math.hypot(point.x - points[index].x, point.y - points[index].y)
+                    > 1e-6
+                ),
+                None,
+            )
+            logic_arc_targets_outcome = (
+                index == -1
+                and arc.class_name == "logic arc"
+                and glyph is not None
+                and glyph.class_name == "outcome"
+            )
+            if other is not None and not logic_arc_targets_outcome:
+                points[index] = js_clip_explicit_endpoint(
+                    reference,
+                    points[index],
+                    other,
+                    glyph_lookup,
+                    port_parent_lookup,
                 )
-                if other is not None:
-                    points[index] = js_clip_explicit_endpoint(
-                        reference,
-                        points[index],
-                        other,
-                        glyph_lookup,
-                        port_parent_lookup,
-                    )
         return points, source_id, target_id
 
     source_glyph = glyph_lookup.get(source_id)
@@ -2026,14 +2374,30 @@ def js_arc_path(
 
     source_center = glyph_center_point(source_glyph)
     target_center = glyph_center_point(target_glyph)
-    source_point = next(
-        (port for port in source_glyph.ports if port.id == arc.source),
-        js_node_boundary_point(source_glyph, target_center),
-    )
-    target_point = next(
-        (port for port in target_glyph.ports if port.id == arc.target),
-        js_node_boundary_point(target_glyph, source_center),
-    )
+    source_point = js_node_boundary_point(source_glyph, target_center)
+    target_point = js_node_boundary_point(target_glyph, source_center)
+    if arc.source in port_parent_lookup:
+        if is_ported_glyph_class(source_glyph.class_name):
+            port = next(
+                (item for item in source_glyph.ports if item.id == arc.source), None
+            )
+            if port is not None:
+                source_point = Point(port.x, port.y)
+        else:
+            endpoint = js_non_cytoscape_port_endpoint(source_glyph, arc.source)
+            if endpoint is not None:
+                source_point = endpoint
+    if arc.target in port_parent_lookup:
+        if is_ported_glyph_class(target_glyph.class_name):
+            port = next(
+                (item for item in target_glyph.ports if item.id == arc.target), None
+            )
+            if port is not None:
+                target_point = Point(port.x, port.y)
+        else:
+            endpoint = js_non_cytoscape_port_endpoint(target_glyph, arc.target)
+            if endpoint is not None:
+                target_point = endpoint
     return [source_point, target_point], source_id, target_id
 
 
@@ -2122,18 +2486,11 @@ def path_for_js_shape(
     """
 
     if glyph is not None and is_ported_glyph_class(glyph.class_name):
-        path_ported_glyph(ctx, rect, glyph)
+        path_ported_glyph(ctx, rect, glyph, transform)
     elif glyph is not None and glyph.class_name == "tag":
         path_polygon_points(ctx, tag_points(rect, glyph.orientation))
     elif glyph is not None and glyph.class_name == "perturbing agent":
         path_polygon_points(ctx, perturbing_agent_points(rect))
-    elif glyph is not None and glyph.class_name == "annotation":
-        callout = (
-            transform.map_point(glyph.callout.x, glyph.callout.y)
-            if transform is not None and glyph.callout is not None
-            else None
-        )
-        path_annotation(ctx, rect, callout)
     elif shape in {"ellipse", "empty set"}:
         path_ellipse(ctx, rect)
     elif shape in {"simple chemical", "stadium_round_rectangle"}:
@@ -2161,6 +2518,7 @@ def draw_js_glyph(
     glyph_color_type: str = "label",
     auto_contrast_text: bool = True,
     style_config: Optional[StyleConfig] = None,
+    source_rect: Optional[PixelRect] = None,
 ) -> None:
     """Draw one glyph using the JS/R primitive mapping.
 
@@ -2180,7 +2538,7 @@ def draw_js_glyph(
         return
     if glyph.bbox is None or is_js_hidden_glyph_class(glyph.class_name):
         return
-    source_rect = sbgnviz_manifest_rect(glyph)
+    source_rect = source_rect or sbgnviz_manifest_rect(glyph)
     rect = bbox_pixel_rect(
         transform,
         BBox(
@@ -2195,15 +2553,6 @@ def draw_js_glyph(
     )
     ctx.set_line_width(float(style["border_width"]))
     dash = style.get("border_dash")
-    if glyph.class_name in {"and", "or", "not", "delay", "interaction"}:
-        for port in glyph.ports:
-            boundary = ellipse_boundary_point(glyph, Point(port.x, port.y))
-            boundary_px = transform.map_point(boundary.x, boundary.y)
-            port_px = transform.map_point(port.x, port.y)
-            color_to_cairo(ctx, style["border"])
-            ctx.move_to(boundary_px.x, boundary_px.y)
-            ctx.line_to(port_px.x, port_px.y)
-            ctx.stroke()
     if glyph.class_name.endswith(" multimer"):
         shadow = PixelRect(
             rect.x0 + 5.0,
@@ -2255,6 +2604,7 @@ def draw_js_marker(
     prev: Point,
     marker_size: float,
     edge_color: Tuple[float, float, float],
+    background_color: Sequence[float] = JS_NODE_FILL_COLOR,
 ) -> None:
     """Draw one JS-style edge marker.
 
@@ -2271,7 +2621,7 @@ def draw_js_marker(
 
     if marker in {"triangle", "filled-triangle"}:
         color_to_cairo(ctx, edge_color)
-        if marker == "filled-triangle":
+        if marker == "filled-triangle" or arc_class == "production":
             draw_marker_polygon(
                 ctx,
                 end,
@@ -2289,7 +2639,7 @@ def draw_js_marker(
                 marker_size,
                 [(-0.15, -0.3), (0.0, 0.0), (0.15, -0.3)],
                 fill=False,
-                background_fill=JS_NODE_FILL_COLOR,
+                background_fill=tuple(background_color[:3]),
                 stroke_color=edge_color,
             )
     elif marker == "barbed-arrow":
@@ -2314,7 +2664,7 @@ def draw_js_marker(
             marker_size,
             [(-0.15, -0.15), (0.0, -0.3), (0.15, -0.15), (0.0, 0.0)],
             fill=False,
-            background_fill=JS_NODE_FILL_COLOR,
+            background_fill=tuple(background_color[:3]),
             stroke_color=edge_color,
         )
     elif marker == "triangle-cross":
@@ -2327,7 +2677,7 @@ def draw_js_marker(
             marker_size,
             [(-0.15, -0.3), (0.0, 0.0), (0.15, -0.3)],
             fill=False,
-            background_fill=JS_NODE_FILL_COLOR,
+            background_fill=tuple(background_color[:3]),
             stroke_color=edge_color,
         )
         draw_marker_polygon(
@@ -2342,7 +2692,7 @@ def draw_js_marker(
                 (0.15, -0.4),
             ],
             fill=False,
-            background_fill=JS_NODE_FILL_COLOR,
+            background_fill=tuple(background_color[:3]),
             stroke_color=edge_color,
         )
     elif marker == "tee":
@@ -2352,8 +2702,14 @@ def draw_js_marker(
     elif marker == "double-tee":
         color_to_cairo(ctx, edge_color)
         ctx.set_line_width(JS_DEFAULT_EDGE_WIDTH)
-        draw_inhibition_bar(ctx, end, prev, marker_size * 0.3, 0.0)
-        draw_inhibition_bar(ctx, end, prev, marker_size * 0.3, marker_size * 0.12)
+        front_offset, rear_offset = absolute_inhibition_bar_offsets(marker_size)
+        draw_inhibition_bar(ctx, end, prev, marker_size * 0.3, front_offset)
+        draw_inhibition_bar(ctx, end, prev, marker_size * 0.3, rear_offset)
+        connector = absolute_inhibition_connector(end, prev, marker_size)
+        if connector is not None:
+            ctx.move_to(connector[0].x, connector[0].y)
+            ctx.line_to(connector[1].x, connector[1].y)
+            ctx.stroke()
     elif marker == "double-triangle":
         dx = end.x - prev.x
         dy = end.y - prev.y
@@ -2371,12 +2727,12 @@ def draw_js_marker(
                     marker_size,
                     [(-0.15, -0.3), (0.0, 0.0), (0.15, -0.3)],
                     fill=False,
-                    background_fill=JS_NODE_FILL_COLOR,
+                    background_fill=tuple(background_color[:3]),
                     stroke_color=edge_color,
                 )
     elif marker == "circle":
         ctx.arc(end.x, end.y, max(marker_size * 0.15, 1.0), 0.0, math.tau)
-        color_to_cairo(ctx, JS_NODE_FILL_COLOR)
+        color_to_cairo(ctx, background_color)
         ctx.fill_preserve()
         color_to_cairo(ctx, edge_color)
         ctx.set_line_width(1.0)
@@ -2411,6 +2767,15 @@ def draw_js_arc(
     path_points, _, _ = resolved
     line_points = js_arc_line_path(arc, path_points, glyph_lookup, port_parent_lookup)
     pixel_points = [transform.map_point(point.x, point.y) for point in line_points]
+    if js_arc_marker(arc.class_name) == "double-tee" and len(pixel_points) >= 2:
+        _, rear_offset = absolute_inhibition_bar_offsets(
+            ARROW_SIZE * CYTOSCAPE_ARROW_SCALE
+        )
+        shortened = point_before_endpoint(
+            pixel_points[-1], pixel_points[-2], rear_offset
+        )
+        if shortened is not None:
+            pixel_points[-1] = shortened
     start_px = pixel_points[0]
     edge_color = edge_color_for_style(style_config)
     color_to_cairo(ctx, edge_color)
@@ -2430,6 +2795,7 @@ def draw_js_arc_marker(
     glyph_lookup: dict[str, Glyph],
     port_parent_lookup: dict[str, str],
     style_config: Optional[StyleConfig] = None,
+    background_color: Sequence[float] = (*JS_NODE_FILL_COLOR, 1.0),
 ) -> None:
     """Draw an arc marker above node fills using Go-compatible placement.
 
@@ -2449,45 +2815,15 @@ def draw_js_arc_marker(
     if resolved is None:
         return
     path_points, _, _ = resolved
-    if arc.class_name == "interaction":
-        source_id = js_endpoint_glyph_id(arc.source, port_parent_lookup)
-        target_id = js_endpoint_glyph_id(arc.target, port_parent_lookup)
-        source_is_entity = (
-            source_id in glyph_lookup and glyph_lookup[source_id].class_name == "entity"
-        )
-        target_is_entity = (
-            target_id in glyph_lookup and glyph_lookup[target_id].class_name == "entity"
-        )
-        edge_color = edge_color_for_style(style_config)
-        triangle = [(-0.15, -0.3), (0.0, 0.0), (0.15, -0.3)]
-        if source_is_entity:
-            draw_marker_polygon(
-                ctx,
-                transform.map_point(path_points[0].x, path_points[0].y),
-                transform.map_point(path_points[1].x, path_points[1].y),
-                ARROW_SIZE * CYTOSCAPE_ARROW_SCALE,
-                triangle,
-                fill=True,
-                stroke_color=edge_color,
-            )
-        if target_is_entity:
-            draw_marker_polygon(
-                ctx,
-                transform.map_point(path_points[-1].x, path_points[-1].y),
-                transform.map_point(path_points[-2].x, path_points[-2].y),
-                ARROW_SIZE * CYTOSCAPE_ARROW_SCALE,
-                triangle,
-                fill=True,
-                stroke_color=edge_color,
-            )
-        return
-    marker = js_arc_marker(arc.class_name)
+    marker = js_arc_marker_for_endpoints(arc, glyph_lookup, port_parent_lookup)
     if marker == "none":
         return
     raw_end = path_points[-1]
-    marker_point = js_arc_marker_point(arc, path_points)
+    marker_point = js_arc_marker_point(
+        arc, path_points, glyph_lookup, port_parent_lookup
+    )
     marker_previous = (
-        path_points[0]
+        path_points[-2]
         if math.hypot(marker_point.x - raw_end.x, marker_point.y - raw_end.y) <= 1e-6
         else raw_end
     )
@@ -2500,6 +2836,7 @@ def draw_js_arc_marker(
         transform.map_point(marker_previous.x, marker_previous.y),
         ARROW_SIZE * CYTOSCAPE_ARROW_SCALE,
         edge_color,
+        background_color,
     )
     ctx.set_source_rgb(*BORDER_COLOR)
     ctx.set_line_width(DEFAULT_LINE_WIDTH)
@@ -2574,6 +2911,8 @@ def sbgnml_basic_render_manifest(
                     glyph.bbox.y + glyph.bbox.h / 2.0,
                 ),
             )
+            x_values.extend([rect.x0, rect.x0 + rect.width])
+            y_values.extend([rect.y0, rect.y0 + rect.height])
             label = (
                 "@".join(
                     part
@@ -2624,6 +2963,7 @@ def sbgnml_basic_render_manifest(
                         "marker": "",
                         "source": "",
                         "target": "",
+                        "font_px": 9.0,
                     }
                 )
             continue
@@ -2640,7 +2980,7 @@ def sbgnml_basic_render_manifest(
                 style_config,
             )
             continue
-        rect = sbgnviz_manifest_rect(glyph)
+        rect = layout_rects.get(glyph.id, sbgnviz_manifest_rect(glyph))
         style = js_glyph_style(
             glyph, glyph_colors, glyph_color_type, auto_contrast_text, style_config
         )
@@ -2685,12 +3025,15 @@ def sbgnml_basic_render_manifest(
                     "y2": None,
                     "cx": rect.center.x,
                     "cy": label_y,
-                    "width": max(1.0, rect.width - 8.0),
-                    "height": max(1.0, rect.height - 8.0),
+                    "width": max(
+                        1.0, len(label.strip()) * float(style["font_px"]) * 0.6
+                    ),
+                    "height": max(1.0, float(style["font_px"])),
                     "text": label,
                     "marker": "",
                     "source": "",
                     "target": "",
+                    "font_px": float(style["font_px"]),
                 }
             )
             emitted_label_ids.add(f"{glyph.id}::label")
@@ -2702,7 +3045,7 @@ def sbgnml_basic_render_manifest(
         path_points, source_id, target_id = resolved
         start_point = path_points[0]
         end_point = path_points[-1]
-        marker = js_arc_marker(arc.class_name)
+        marker = js_arc_marker_for_endpoints(arc, glyph_lookup, port_parent_lookup)
         elements.append(
             {
                 "id": f"{arc.id}::line",
@@ -2725,7 +3068,9 @@ def sbgnml_basic_render_manifest(
             }
         )
         if marker != "none":
-            marker_point = js_arc_marker_point(arc, path_points)
+            marker_point = js_arc_marker_point(
+                arc, path_points, glyph_lookup, port_parent_lookup
+            )
             elements.append(
                 {
                     "id": f"{arc.id}::marker",
@@ -2824,18 +3169,475 @@ def sbgnml_basic_render_manifest(
         },
         "elements": elements,
     }
+    for element in elements:
+        element.setdefault("font_px", None)
     if output_width is not None and output_height is not None:
-        return transform_manifest_to_rendered_pixels(
+        manifest = transform_manifest_to_rendered_pixels(
             manifest,
             bounds,
             padding,
             output_width,
             output_height,
-            fit_bounds=cytoscape_fit_bounds(
-                glyphs, glyph_lookup, layout_rects, glyph_colors, glyph_color_type
-            ),
         )
+    add_manifest_rendered_details(
+        manifest,
+        glyphs,
+        glyph_colors,
+        glyph_color_type,
+        auto_contrast_text,
+        style_config,
+    )
     return manifest
+
+
+def color_hex(color: Sequence[float], include_alpha: bool = False) -> str:
+    """Serialize normalized color channels as a lowercase hex color.
+
+    Args:
+        color: Normalized RGB or RGBA channels.
+        include_alpha: Whether to include an alpha channel.
+
+    Returns:
+        Lowercase hexadecimal color.
+    """
+
+    channel_count = 4 if include_alpha else 3
+    channels = list(color[:channel_count])
+    while len(channels) < channel_count:
+        channels.append(1.0)
+    values = [round(max(0.0, min(1.0, value)) * 255.0) for value in channels]
+    return "#" + "".join(f"{value:02x}" for value in values)
+
+
+def manifest_bbox(rect: PixelRect) -> dict[str, float]:
+    """Return a manifest bounding-box object for a rectangle.
+
+    Args:
+        rect: Rendered rectangle.
+
+    Returns:
+        Manifest bounding-box fields.
+    """
+
+    return {
+        "x1": rect.x0,
+        "y1": rect.y0,
+        "x2": rect.x0 + rect.width,
+        "y2": rect.y0 + rect.height,
+        "width": rect.width,
+        "height": rect.height,
+        "cx": rect.center.x,
+        "cy": rect.center.y,
+    }
+
+
+def points_rect(points: Sequence[Point]) -> PixelRect:
+    """Return the smallest rectangle enclosing a point sequence.
+
+    Args:
+        points: Points to enclose.
+
+    Returns:
+        Smallest enclosing rectangle.
+    """
+
+    min_x = min(point.x for point in points)
+    max_x = max(point.x for point in points)
+    min_y = min(point.y for point in points)
+    max_y = max(point.y for point in points)
+    return PixelRect(
+        min_x,
+        min_y,
+        max_x - min_x,
+        max_y - min_y,
+        Point((min_x + max_x) / 2.0, (min_y + max_y) / 2.0),
+    )
+
+
+def marker_rendered_detail(
+    element: dict[str, Any],
+    line: dict[str, Any],
+    style_config: Optional[StyleConfig],
+) -> Optional[dict[str, Any]]:
+    """Describe concrete marker primitives in rendered pixel coordinates.
+
+    Args:
+        element: Marker manifest element.
+        line: Owning arc line element.
+        style_config: Optional renderer style configuration.
+
+    Returns:
+        Rendered detail object, or None for an unsupported marker.
+    """
+
+    marker = element.get("marker")
+    coordinates = (
+        element.get("cx"),
+        element.get("cy"),
+        line.get("x1"),
+        line.get("y1"),
+    )
+    if marker in {None, "", "none"} or any(value is None for value in coordinates):
+        return None
+    end = Point(float(coordinates[0]), float(coordinates[1]))
+    start = Point(float(coordinates[2]), float(coordinates[3]))
+    edge_color = edge_color_for_style(style_config)
+    edge_hex = color_hex(edge_color)
+    primitives: list[dict[str, Any]] = []
+
+    def add_polygon(
+        shape: str,
+        purpose: str,
+        local_points: list[tuple[float, float]],
+        fill: Any,
+        stroke: Any,
+        stroke_width: Any,
+    ) -> None:
+        rendered_points = marker_points(
+            end,
+            start,
+            ARROW_SIZE * CYTOSCAPE_ARROW_SCALE,
+            local_points,
+        )
+        if not rendered_points:
+            return
+        primitives.append(
+            {
+                "kind": "path",
+                "shape": shape,
+                "purpose": purpose,
+                "rendered_points": [
+                    {"x": point.x, "y": point.y} for point in rendered_points
+                ],
+                "bbox": manifest_bbox(points_rect(rendered_points)),
+                "fill": fill,
+                "stroke": stroke,
+                "stroke_width": stroke_width,
+            }
+        )
+
+    if marker == "triangle":
+        fill = edge_hex if element.get("class") == "production" else "none"
+        stroke = None if element.get("class") == "production" else edge_hex
+        stroke_width = None if stroke is None else 1.0
+        add_polygon(
+            "triangle",
+            "target_arrow_triangle",
+            [(-0.15, -0.3), (0.0, 0.0), (0.15, -0.3)],
+            fill,
+            stroke,
+            stroke_width,
+        )
+    elif marker == "barbed-arrow":
+        add_polygon(
+            "barbed-arrow",
+            "target_assignment_arrow",
+            [(0.0, 0.0), (-0.15, -0.3), (0.0, -0.21), (0.15, -0.3)],
+            edge_hex,
+            edge_hex,
+            1.0,
+        )
+    elif marker == "diamond":
+        add_polygon(
+            "diamond",
+            "target_arrow_diamond",
+            [(-0.15, -0.15), (0.0, -0.3), (0.15, -0.15), (0.0, 0.0)],
+            "none",
+            edge_hex,
+            1.0,
+        )
+    elif marker == "tee":
+        add_polygon(
+            "tee",
+            "target_arrow_tee_bar",
+            [(-0.15, 0.0), (-0.15, -0.1), (0.15, -0.1), (0.15, 0.0)],
+            edge_hex,
+            None,
+            None,
+        )
+    elif marker == "double-tee":
+        for shape, purpose, local_points in (
+            (
+                "double-tee-front",
+                "target_arrow_front_bar",
+                [(-0.15, 0.0), (-0.15, -0.1), (0.15, -0.1), (0.15, 0.0)],
+            ),
+            (
+                "double-tee-rear",
+                "target_arrow_rear_bar",
+                [(-0.15, -0.12), (-0.15, -0.22), (0.15, -0.22), (0.15, -0.12)],
+            ),
+        ):
+            add_polygon(shape, purpose, local_points, edge_hex, None, None)
+    elif marker == "triangle-cross":
+        add_polygon(
+            "triangle-cross-triangle",
+            "target_arrow_triangle_part",
+            [(-0.15, -0.3), (0.0, 0.0), (0.15, -0.3), (-0.15, -0.3)],
+            "none",
+            edge_hex,
+            1.0,
+        )
+        add_polygon(
+            "triangle-cross-bar",
+            "target_arrow_cross_bar_part",
+            [
+                (-0.15, -0.4),
+                (-0.15, -0.4344827586206897),
+                (0.15, -0.4344827586206897),
+                (0.15, -0.4),
+            ],
+            "none",
+            edge_hex,
+            1.0,
+        )
+    elif marker == "circle":
+        radius = 0.15 * ARROW_SIZE * CYTOSCAPE_ARROW_SCALE
+        rect = PixelRect(
+            end.x - radius,
+            end.y - radius,
+            radius * 2.0,
+            radius * 2.0,
+            end,
+        )
+        primitives.append(
+            {
+                "kind": "path",
+                "shape": "circle",
+                "source_rule": "Cytoscape circle arrow shape radius=0.15*arrow_size",
+                "bbox": manifest_bbox(rect),
+                "fill": "none",
+                "stroke": edge_hex,
+                "stroke_width": 1.0,
+            }
+        )
+    if not primitives:
+        return None
+    fill_mode = (
+        "filled"
+        if marker in {"barbed-arrow", "tee"}
+        or (marker == "triangle" and element.get("class") == "production")
+        else "hollow"
+    )
+    return {
+        "renderer": "render_sbgn_py",
+        "coordinate_space": "rendered_pixel",
+        "source_rule": (
+            f"sbgnviz maps {element.get('class', '')} to Cytoscape "
+            f"target-arrow-shape {marker}"
+        ),
+        "style": {
+            "stroke": edge_hex,
+            "stroke_width": JS_DEFAULT_EDGE_WIDTH,
+            "arrow_size": ARROW_SIZE * CYTOSCAPE_ARROW_SCALE,
+            "fill_mode": fill_mode,
+            "target_arrow_fill": fill_mode,
+        },
+        "drawn_primitives": primitives,
+    }
+
+
+def manifest_element_rect(element: dict[str, Any]) -> Optional[PixelRect]:
+    """Build a rectangle from a manifest element's rendered coordinates.
+
+    Args:
+        element: Manifest element containing rectangle fields.
+
+    Returns:
+        Rendered rectangle, or None when coordinates are unavailable.
+    """
+
+    values = [element.get(key) for key in ("x1", "y1", "x2", "y2")]
+    if all(value is not None for value in values):
+        x0 = min(float(values[0]), float(values[2]))
+        y0 = min(float(values[1]), float(values[3]))
+        width = abs(float(values[2]) - float(values[0]))
+        height = abs(float(values[3]) - float(values[1]))
+        return PixelRect(
+            x0,
+            y0,
+            width,
+            height,
+            Point(x0 + width / 2.0, y0 + height / 2.0),
+        )
+    return None
+
+
+def node_rendered_detail(
+    element: dict[str, Any],
+    glyph: Glyph,
+    glyph_colors: Optional[dict[str, str]],
+    glyph_color_type: str,
+    auto_contrast_text: bool,
+    style_config: Optional[StyleConfig],
+) -> Optional[dict[str, Any]]:
+    """Describe concrete primitives for visually sensitive node classes.
+
+    Args:
+        element: Node manifest element.
+        glyph: Parsed glyph represented by the element.
+        glyph_colors: Optional glyph color mapping.
+        glyph_color_type: Whether color keys are labels or IDs.
+        auto_contrast_text: Whether custom fills adjust text contrast.
+        style_config: Optional renderer style configuration.
+
+    Returns:
+        Rendered detail object, or None for a generic node.
+    """
+
+    class_name = glyph.class_name
+    source_rules = {
+        "compartment": (
+            "sbgnviz compartment uses Cytoscape barrel node shape",
+            "barrel",
+        ),
+        "tag": ("sbgnviz tag shape-polygon-points", "polygon"),
+        "perturbing agent": (
+            "sbgnviz perturbing agent shape-polygon-points",
+            "polygon",
+        ),
+    }
+    if "complex" in class_name:
+        source_rule = "sbgnviz complex generateComplexShapePoints cornerLength=24"
+        shape_name = "complex"
+    elif "simple chemical" in class_name:
+        source_rule = "sbgnviz simple chemical drawSimpleChemicalPath"
+        shape_name = "stadium_round_rectangle"
+    elif class_name in source_rules:
+        source_rule, shape_name = source_rules[class_name]
+    else:
+        return None
+    rect = manifest_element_rect(element)
+    if rect is None:
+        return None
+    style = js_glyph_style(
+        glyph,
+        glyph_colors,
+        glyph_color_type,
+        auto_contrast_text,
+        style_config,
+    )
+    fill = style.get("fill")
+    style_detail = {
+        "fill": "none" if fill is None else color_hex(fill, include_alpha=True),
+        "stroke": color_hex(style["border"]),
+        "stroke_width": style["border_width"],
+    }
+
+    def primitive(
+        shape: str,
+        rule: str,
+        primitive_rect: PixelRect,
+        points: Optional[Sequence[Point]] = None,
+    ) -> dict[str, Any]:
+        result: dict[str, Any] = {
+            "kind": "path",
+            "shape": shape,
+            "source_rule": rule,
+            "bbox": manifest_bbox(primitive_rect),
+            **style_detail,
+        }
+        if points:
+            result["rendered_points"] = [
+                {"x": point.x, "y": point.y} for point in points
+            ]
+        return result
+
+    points: Optional[Sequence[Point]] = None
+    if "complex" in class_name:
+        corner = max(1.0, min(12.0, min(rect.width, rect.height) / 3.0))
+        points = [
+            Point(rect.x0 + corner, rect.y0),
+            Point(rect.x0, rect.y0 + corner),
+            Point(rect.x0, rect.y0 + rect.height - corner),
+            Point(rect.x0 + corner, rect.y0 + rect.height),
+            Point(rect.x0 + rect.width - corner, rect.y0 + rect.height),
+            Point(rect.x0 + rect.width, rect.y0 + rect.height - corner),
+            Point(rect.x0 + rect.width, rect.y0 + corner),
+            Point(rect.x0 + rect.width - corner, rect.y0),
+        ]
+    elif class_name == "tag":
+        points = tag_points(rect, glyph.orientation)
+    elif class_name == "perturbing agent":
+        points = perturbing_agent_points(rect)
+
+    primitives: list[dict[str, Any]] = []
+    if class_name.endswith(" multimer"):
+        shadow_rect = PixelRect(
+            rect.x0 + 5.0,
+            rect.y0 + 5.0,
+            rect.width,
+            rect.height,
+            Point(rect.center.x + 5.0, rect.center.y + 5.0),
+        )
+        shadow_shape = (
+            "multimer_shadow_stadium"
+            if style["shape"] == "simple chemical"
+            else f"multimer_shadow_{str(style['shape']).replace(' ', '_')}"
+        )
+        primitives.append(
+            primitive(
+                shadow_shape,
+                "sbgnviz multimer pre-draw offset by 5 px",
+                shadow_rect,
+            )
+        )
+    primitives.append(primitive(shape_name, source_rule, rect, points))
+    return {
+        "renderer": "render_sbgn_py",
+        "coordinate_space": "rendered_pixel",
+        "style": style_detail,
+        "drawn_primitives": primitives,
+    }
+
+
+def add_manifest_rendered_details(
+    manifest: dict[str, Any],
+    glyphs: Sequence[Glyph],
+    glyph_colors: Optional[dict[str, str]],
+    glyph_color_type: str,
+    auto_contrast_text: bool,
+    style_config: Optional[StyleConfig],
+) -> None:
+    """Attach strict rendered primitive details to manifest elements.
+
+    Args:
+        manifest: Manifest to update in place.
+        glyphs: Parsed glyphs.
+        glyph_colors: Optional glyph color mapping.
+        glyph_color_type: Whether color keys are labels or IDs.
+        auto_contrast_text: Whether custom fills adjust text contrast.
+        style_config: Optional renderer style configuration.
+
+    Returns:
+        None.
+    """
+
+    glyph_lookup = {glyph.id: glyph for glyph in reversed(glyphs)}
+    lines = {
+        element["owner_id"]: element
+        for element in manifest["elements"]
+        if element["kind"] == "edge_line"
+    }
+    for element in manifest["elements"]:
+        detail = None
+        if element["kind"] == "node_shape":
+            glyph = glyph_lookup.get(element["owner_id"])
+            if glyph is not None:
+                detail = node_rendered_detail(
+                    element,
+                    glyph,
+                    glyph_colors,
+                    glyph_color_type,
+                    auto_contrast_text,
+                    style_config,
+                )
+        elif element["kind"] == "edge_marker":
+            detail = marker_rendered_detail(
+                element, lines.get(element["owner_id"], {}), style_config
+            )
+        if detail is not None:
+            element["rendered_detail"] = detail
 
 
 def cytoscape_border_width(
@@ -3293,6 +4095,19 @@ def draw_sbgnml(
     """
 
     glyphs, arcs, bounds = parse_sbgnml(input_path)
+    render_information = parse_render_information(input_path)
+    background_color = render_information["background_color"] or (
+        1.0,
+        1.0,
+        1.0,
+        1.0,
+    )
+    if style_config is not None:
+        configured_background = style_config.get("background_color")
+        if isinstance(configured_background, str):
+            parsed_background = parse_color_value(configured_background, {})
+            if parsed_background is not None:
+                background_color = parsed_background
     transform, width, height = transform_with_padding(
         bounds, padding, output_width, output_height
     )
@@ -3318,7 +4133,7 @@ def draw_sbgnml(
         target_path.parent.mkdir(parents=True, exist_ok=True)
         if target_format == "png":
             surface, ctx = create_png_surface(
-                int(math.ceil(width)), int(math.ceil(height))
+                int(math.ceil(width)), int(math.ceil(height)), background_color
             )
             render_sbgnml(
                 ctx,
@@ -3330,6 +4145,7 @@ def draw_sbgnml(
                 glyph_color_type,
                 auto_contrast_text,
                 style_config,
+                background_color,
             )
             surface.write_to_png(str(target_path))
         elif target_format == "svg":
@@ -3347,7 +4163,9 @@ def draw_sbgnml(
                     glyph_color_type,
                     auto_contrast_text,
                     style_config,
+                    background_color,
                 ),
+                background_color,
             )
 
 
@@ -3371,12 +4189,16 @@ def render_output_paths(
         return [(output_path, suffix.removeprefix("."))]
 
     paths = []
+    seen_formats: set[str] = set()
     for raw_format in output_format.split(","):
         normalized = raw_format.strip().lower()
         if not normalized:
             continue
         if normalized not in {"png", "svg"}:
             raise ValueError("output format must be png or svg")
+        if normalized in seen_formats:
+            continue
+        seen_formats.add(normalized)
         paths.append((input_path.with_suffix(f".{normalized}"), normalized))
     if not paths:
         raise ValueError("at least one output format is required")

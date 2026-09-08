@@ -1,0 +1,80 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<sbgn xmlns="http://sbgn.org/libsbgn/0.3">
+  <map language="entity relationship" id="figure_2_16">
+    <glyph id="camkii" class="entity">
+      <label text="CaMKII"/>
+      <bbox x="582" y="441" w="227" h="75"/>
+    </glyph>
+    <glyph id="cam" class="entity">
+      <label text="CaM"/>
+      <bbox x="1041" y="572" w="124" h="76"/>
+    </glyph>
+    <glyph id="binding_junction" class="implicit xor">
+      <bbox x="778" y="610" w="0" h="0"/>
+    </glyph>
+    <arc id="cis_interaction" class="assignment" source="camkii" target="camkii">
+      <glyph id="cis_outcome" class="outcome">
+        <bbox x="730" y="553" w="10" h="10"/>
+      </glyph>
+      <glyph id="cis_label" class="cardinality">
+        <label text="cis"/>
+        <bbox x="652" y="604" w="35" h="28"/>
+      </glyph>
+      <port id="cis_inhibition_target" x="735" y="586"/>
+      <start x="608" y="516"/>
+      <next x="608" y="618"/>
+      <next x="735" y="618"/>
+      <end x="735" y="516"/>
+    </arc>
+    <arc id="cis_interaction_reverse" class="assignment" source="camkii" target="camkii">
+      <start x="735" y="516"/>
+      <next x="735" y="618"/>
+      <next x="608" y="618"/>
+      <end x="608" y="516"/>
+    </arc>
+    <arc id="trans_interaction" class="assignment" source="camkii" target="camkii">
+      <glyph id="trans_outcome" class="outcome">
+        <bbox x="843" y="496" w="10" h="10"/>
+      </glyph>
+      <glyph id="trans_label" class="cardinality">
+        <label text="trans"/>
+        <bbox x="850" y="468" w="50" h="22"/>
+      </glyph>
+      <start x="809" y="457"/>
+      <next x="870" y="457"/>
+      <next x="870" y="501"/>
+      <end x="809" y="501"/>
+    </arc>
+    <arc id="trans_interaction_reverse" class="assignment" source="camkii" target="camkii">
+      <start x="809" y="501"/>
+      <next x="870" y="501"/>
+      <next x="870" y="457"/>
+      <end x="809" y="457"/>
+    </arc>
+    <arc id="binding_to_camkii" class="assignment" source="binding_junction" target="camkii">
+      <glyph id="binding_outcome" class="outcome">
+        <bbox x="773" y="581" w="10" h="10"/>
+      </glyph>
+      <port id="binding_vertical_target" x="778" y="558"/>
+      <start x="778" y="610"/>
+      <end x="778" y="516"/>
+    </arc>
+    <arc id="binding_to_cam" class="assignment" source="binding_junction" target="cam">
+      <port id="binding_horizontal_target" x="848" y="610"/>
+      <start x="778" y="610"/>
+      <end x="1041" y="610"/>
+    </arc>
+    <arc id="binding_inhibits_cis" class="inhibition" source="binding_outcome" target="cis_inhibition_target">
+      <start x="773" y="586"/>
+      <end x="735" y="586"/>
+    </arc>
+    <arc id="cis_inhibits_binding" class="absolute inhibition" source="cis_outcome" target="binding_vertical_target">
+      <start x="740" y="558"/>
+      <end x="778" y="558"/>
+    </arc>
+    <arc id="trans_inhibits_binding" class="absolute inhibition" source="trans_outcome" target="binding_horizontal_target">
+      <start x="848" y="506"/>
+      <end x="848" y="610"/>
+    </arc>
+  </map>
+</sbgn>

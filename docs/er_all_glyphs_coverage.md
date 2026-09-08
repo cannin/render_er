@@ -49,11 +49,11 @@ xmllint --noout --schema /path/to/libsbgn/resources/SBGN.xsd \
 Render both output formats:
 
 ```bash
-cargo --manifest-path rust/Cargo.toml run --release -- draw_sbgnml \
+cargo run --manifest-path rust/Cargo.toml --release -- draw_sbgnml \
   --input-path render_examples/er_all_glyphs.sbgn \
   --output-path output/er_all_glyphs.png
 
-cargo --manifest-path rust/Cargo.toml run --release -- draw_sbgnml \
+cargo run --manifest-path rust/Cargo.toml --release -- draw_sbgnml \
   --input-path render_examples/er_all_glyphs.sbgn \
   --output-path output/er_all_glyphs.svg
 ```

@@ -4,9 +4,9 @@ Go SBGN-ML renderer using `github.com/tdewolff/canvas`. Releases use a
 subdirectory-prefixed tag such as `go/vX.Y.Z`, following Go conventions for a
 module in a subdirectory.
 
-Prebuilt release executables are available for Ubuntu Linux and Windows on
-amd64, and macOS on arm64, from the
-[project releases](https://github.com/cannin/render_sbgn/releases). On Linux or
+Prebuilt release executables are available for Linux, macOS, and Windows on
+amd64 and arm64 from the
+[project releases](https://github.com/cannin/render_er/releases). On Linux or
 macOS, run `chmod +x` on a downloaded executable before use.
 
 ## Requirements and build

@@ -26,8 +26,13 @@ rustc-ice-*.txt
 # render_er repository artifacts
 /tmp/
 .DS_Store
+**/__pycache__/
+*.py[cod]
+/*.Rcheck/
+/renderSbgnR_*.tar.gz
 sbgn_ER-level1.pdf
 ER_L1V2.0_web.png
 render_er_20260908.csv
 sbgn_er_spec_tmp.pdf
+sbgn_er_tmp2.pdf
 /output/

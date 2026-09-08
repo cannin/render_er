@@ -19,6 +19,7 @@ const DEFAULT_PADDING_PX: f64 = 50.0;
 const RENDERER_VERSION: &str = env!("CARGO_PKG_VERSION");
 const ARROW_SIZE: f64 = 8.0;
 const CYTOSCAPE_ARROW_SCALE: f64 = 4.53125;
+const JS_LOGICAL_NODE_SIZE: f64 = 21.0;
 const FONT_BYTES: &[u8] = include_bytes!("../../assets/LiberationSans-Regular.ttf");
 const SVG_SANS_FONT_FAMILY: &str = "Arial, 'Liberation Sans', Arimo, sans-serif";
 
@@ -968,7 +969,7 @@ fn build_render_test_manifest(
             glyph.class_name.as_str(),
             "unit of information" | "state variable" | "existence" | "location"
         ) {
-            if glyph.parent_id.is_none() {
+            if glyph.parent_id.is_none() && glyph.class_name != "state variable" {
                 continue;
             }
             let rect = bbox_pixel_rect(
@@ -1120,7 +1121,7 @@ fn build_render_test_manifest(
         else {
             continue;
         };
-        let marker = js_arc_marker(&arc.class_name);
+        let marker = js_arc_marker_for_endpoints(arc, &glyph_lookup, &port_parent_lookup);
         elements.push(ManifestElement {
             id: format!("{}::line", arc.id),
             owner_id: arc.id.clone(),
@@ -1142,7 +1143,8 @@ fn build_render_test_manifest(
             font_px: None,
         });
         if marker != "none" {
-            let marker_point = js_arc_marker_point(arc, start, end);
+            let marker_point =
+                js_arc_marker_point(arc, start, end, &glyph_lookup, &port_parent_lookup);
             elements.push(ManifestElement {
                 id: format!("{}::marker", arc.id),
                 owner_id: arc.id.clone(),
@@ -1295,18 +1297,7 @@ fn sbgnviz_manifest_rect(glyph: &Glyph) -> PixelRect {
 }
 
 fn sbgnviz_port_span(glyph: &Glyph) -> Option<f64> {
-    if !matches!(
-        glyph.class_name.as_str(),
-        "process"
-            | "omitted process"
-            | "uncertain process"
-            | "association"
-            | "dissociation"
-            | "and"
-            | "or"
-            | "not"
-    ) || glyph.ports.len() < 2
-    {
+    if !is_ported_glyph_class(&glyph.class_name) || glyph.ports.len() < 2 {
         return None;
     }
     let min_x = glyph
@@ -1418,6 +1409,13 @@ fn is_js_hidden_glyph_class(class_name: &str) -> bool {
     )
 }
 
+fn is_auxiliary_glyph_class(class_name: &str) -> bool {
+    matches!(
+        class_name,
+        "unit of information" | "state variable" | "existence" | "location"
+    )
+}
+
 fn is_arc_auxiliary_glyph_class(class_name: &str) -> bool {
     matches!(
         class_name.trim().to_ascii_lowercase().as_str(),
@@ -1442,6 +1440,13 @@ fn auxiliary_glyph_label(glyph: &Glyph) -> String {
 
 fn auxiliary_glyph_shape(glyph: &Glyph) -> &'static str {
     if glyph.class_name == "state variable" {
+        if glyph.parent_id.is_none()
+            && glyph
+                .bbox
+                .is_none_or(|bbox| (bbox.w - bbox.h).abs() <= 1e-6)
+        {
+            return "ellipse";
+        }
         return "stadium_round_rectangle";
     }
     if matches!(glyph.class_name.as_str(), "existence" | "location") {
@@ -1715,11 +1720,29 @@ fn js_arc_points(
                 )
             })
             .unwrap_or(*start);
-        let end = target_other
-            .map(|other| {
-                js_clip_explicit_endpoint(target_ref, *end, other, glyph_lookup, port_parent_lookup)
-            })
-            .unwrap_or(*end);
+        let target_id = port_parent_lookup
+            .get(target_ref)
+            .copied()
+            .unwrap_or(target_ref);
+        let logic_arc_targets_outcome = arc.class_name == "logic arc"
+            && glyph_lookup
+                .get(target_id)
+                .is_some_and(|glyph| glyph.class_name == "outcome");
+        let end = if logic_arc_targets_outcome {
+            *end
+        } else {
+            target_other
+                .map(|other| {
+                    js_clip_explicit_endpoint(
+                        target_ref,
+                        *end,
+                        other,
+                        glyph_lookup,
+                        port_parent_lookup,
+                    )
+                })
+                .unwrap_or(*end)
+        };
         return Some((start, end, source_ref.to_string(), target_ref.to_string()));
     }
     let source_id = port_parent_lookup
@@ -1751,21 +1774,36 @@ fn js_arc_points(
         .last()
         .copied()
         .or_else(|| js_node_boundary_point(target_glyph, source_center))?;
-    if port_parent_lookup.contains_key(source_ref)
-        && !is_ported_glyph_class(&source_glyph.class_name)
-    {
-        if let Some(point) = js_non_cytoscape_port_endpoint(source_glyph, source_ref) {
+    if port_parent_lookup.contains_key(source_ref) {
+        if is_ported_glyph_class(&source_glyph.class_name) {
+            if let Some(point) = js_port_point(source_glyph, source_ref) {
+                start = point;
+            }
+        } else if let Some(point) = js_non_cytoscape_port_endpoint(source_glyph, source_ref) {
             start = point;
         }
     }
-    if port_parent_lookup.contains_key(target_ref)
-        && !is_ported_glyph_class(&target_glyph.class_name)
-    {
-        if let Some(point) = js_non_cytoscape_port_endpoint(target_glyph, target_ref) {
+    if port_parent_lookup.contains_key(target_ref) {
+        if is_ported_glyph_class(&target_glyph.class_name) {
+            if let Some(point) = js_port_point(target_glyph, target_ref) {
+                end = point;
+            }
+        } else if let Some(point) = js_non_cytoscape_port_endpoint(target_glyph, target_ref) {
             end = point;
         }
     }
     Some((start, end, source_id.to_string(), target_id.to_string()))
+}
+
+fn js_port_point(glyph: &Glyph, port_id: &str) -> Option<Point> {
+    glyph
+        .ports
+        .iter()
+        .find(|port| port.id == port_id)
+        .map(|port| Point {
+            x: port.x,
+            y: port.y,
+        })
 }
 
 /// Clips delay and other non-ported endpoints to the painted node boundary.
@@ -1857,7 +1895,12 @@ fn js_clip_explicit_endpoint(
     glyph_lookup: &HashMap<&str, &Glyph>,
     port_parent_lookup: &HashMap<&str, &str>,
 ) -> Point {
-    if port_parent_lookup.contains_key(reference) {
+    if let Some(parent_id) = port_parent_lookup.get(reference).copied() {
+        if let Some(glyph) = glyph_lookup.get(parent_id).copied() {
+            if is_ported_glyph_class(&glyph.class_name) {
+                return js_port_point(glyph, reference).unwrap_or(endpoint);
+            }
+        }
         return endpoint;
     }
     let nested_boundary = glyph_lookup
@@ -1978,8 +2021,34 @@ fn js_arc_marker(class_name: &str) -> &'static str {
         "catalysis" => "circle",
         "modulation" | "unknown influence" => "diamond",
         "necessary stimulation" => "triangle-cross",
-        "absolute stimulation" => "double-triangle",
+        "absolute stimulation" => "triangle",
         _ => "triangle",
+    }
+}
+
+fn js_arc_marker_for_endpoints(
+    arc: &Arc,
+    glyph_lookup: &HashMap<&str, &Glyph>,
+    port_parent_lookup: &HashMap<&str, &str>,
+) -> &'static str {
+    let marker = js_arc_marker(&arc.class_name);
+    if marker != "barbed-arrow" {
+        return marker;
+    }
+    let Some(target_ref) = arc.target.as_deref() else {
+        return marker;
+    };
+    let target_id = port_parent_lookup
+        .get(target_ref)
+        .copied()
+        .unwrap_or(target_ref);
+    if glyph_lookup
+        .get(target_id)
+        .is_some_and(|glyph| glyph.class_name == "implicit xor")
+    {
+        "none"
+    } else {
+        marker
     }
 }
 
@@ -1994,7 +2063,23 @@ fn js_marker_tip_offset_source(class_name: &str) -> f64 {
     }
 }
 
-fn js_arc_marker_point(arc: &Arc, start: Point, end: Point) -> Point {
+fn js_arc_marker_point(
+    arc: &Arc,
+    start: Point,
+    end: Point,
+    glyph_lookup: &HashMap<&str, &Glyph>,
+    port_parent_lookup: &HashMap<&str, &str>,
+) -> Point {
+    let target_glyph = arc.target.as_deref().and_then(|target_ref| {
+        let target_id = port_parent_lookup
+            .get(target_ref)
+            .copied()
+            .unwrap_or(target_ref);
+        glyph_lookup.get(target_id).copied()
+    });
+    if target_glyph.is_none() {
+        return end;
+    }
     let other = if arc.points.len() > 2 {
         arc.points[arc.points.len() - 2]
     } else {
@@ -2182,15 +2267,15 @@ fn render_scene<B: Backend>(
 }
 
 fn draw_auxiliary_glyph<B: Backend>(backend: &mut B, transform: &Transform, glyph: &Glyph) -> bool {
-    if !matches!(
-        glyph.class_name.as_str(),
-        "unit of information" | "state variable" | "existence" | "location"
-    ) {
+    if !is_auxiliary_glyph_class(&glyph.class_name) {
         return false;
     }
-    let (Some(_), Some(bbox)) = (glyph.parent_id.as_ref(), glyph.bbox) else {
+    let Some(bbox) = glyph.bbox else {
         return true;
     };
+    if glyph.parent_id.is_none() && glyph.class_name != "state variable" {
+        return true;
+    }
     let mut rect = bbox_pixel_rect(transform, bbox);
     if matches!(glyph.class_name.as_str(), "existence" | "location") {
         rect = inscribed_circle_rect(rect);
@@ -2233,44 +2318,20 @@ fn draw_auxiliary_glyph<B: Backend>(backend: &mut B, transform: &Transform, glyp
         );
     }
     if glyph.class_name == "location" {
-        let diagonal_radius = rect.width / 2.0 * std::f64::consts::FRAC_1_SQRT_2;
-        let mut first = PathBuilder::new();
-        first.move_to(
-            (rect.center.x - diagonal_radius) as f32,
-            (rect.center.y + diagonal_radius) as f32,
-        );
-        first.line_to(
-            (rect.center.x + diagonal_radius) as f32,
-            (rect.center.y - diagonal_radius) as f32,
-        );
-        if let Some(path) = first.finish() {
-            backend.draw_path(
-                &path,
-                &DrawStyle {
-                    fill: None,
-                    stroke: Some(JS_NODE_BORDER_COLOR),
-                    stroke_width: JS_DEFAULT_NODE_BORDER_WIDTH,
-                },
-            );
-        }
-        let mut second = PathBuilder::new();
-        second.move_to(
-            (rect.center.x - diagonal_radius) as f32,
-            (rect.center.y - diagonal_radius) as f32,
-        );
-        second.line_to(
-            (rect.center.x + diagonal_radius) as f32,
-            (rect.center.y + diagonal_radius) as f32,
-        );
-        if let Some(path) = second.finish() {
-            backend.draw_path(
-                &path,
-                &DrawStyle {
-                    fill: None,
-                    stroke: Some(JS_NODE_BORDER_COLOR),
-                    stroke_width: JS_DEFAULT_NODE_BORDER_WIDTH,
-                },
-            );
+        for [from, to] in location_cross_lines(rect) {
+            let mut builder = PathBuilder::new();
+            builder.move_to(from.x as f32, from.y as f32);
+            builder.line_to(to.x as f32, to.y as f32);
+            if let Some(path) = builder.finish() {
+                backend.draw_path(
+                    &path,
+                    &DrawStyle {
+                        fill: None,
+                        stroke: Some(JS_NODE_BORDER_COLOR),
+                        stroke_width: JS_DEFAULT_NODE_BORDER_WIDTH,
+                    },
+                );
+            }
         }
     }
     let label = auxiliary_glyph_label(glyph);
@@ -2283,6 +2344,37 @@ fn draw_auxiliary_glyph<B: Backend>(backend: &mut B, transform: &Transform, glyp
         );
     }
     true
+}
+
+fn location_cross_lines(rect: PixelRect) -> [[Point; 2]; 2] {
+    let radius = rect.width.min(rect.height) / 2.0;
+    let diagonal_radius = radius * std::f64::consts::FRAC_1_SQRT_2;
+    let chord_offset = radius / 3.0;
+    let chord_midpoint = Point {
+        x: rect.center.x - chord_offset * std::f64::consts::FRAC_1_SQRT_2,
+        y: rect.center.y - chord_offset * std::f64::consts::FRAC_1_SQRT_2,
+    };
+    let chord_delta =
+        (radius * radius - chord_offset * chord_offset).sqrt() * std::f64::consts::FRAC_1_SQRT_2;
+    [
+        [
+            chord_midpoint,
+            Point {
+                x: rect.center.x + diagonal_radius,
+                y: rect.center.y + diagonal_radius,
+            },
+        ],
+        [
+            Point {
+                x: chord_midpoint.x - chord_delta,
+                y: chord_midpoint.y + chord_delta,
+            },
+            Point {
+                x: chord_midpoint.x + chord_delta,
+                y: chord_midpoint.y - chord_delta,
+            },
+        ],
+    ]
 }
 
 /// Returns the largest centered square that fits inside a rendered rectangle.
@@ -2377,10 +2469,7 @@ fn draw_js_glyph<B: Backend>(
         glyph_color_type,
         auto_contrast_text,
     );
-    if matches!(
-        glyph.class_name.as_str(),
-        "and" | "or" | "not" | "delay" | "interaction"
-    ) {
+    if glyph.class_name == "interaction" {
         if let Some(bbox) = glyph.bbox {
             for port in &glyph.ports {
                 let port_point = Point {
@@ -2510,7 +2599,7 @@ fn js_shape_path_for_glyph(
     transform: &Transform,
 ) -> SkPath {
     if is_ported_glyph_class(&glyph.class_name) {
-        return ported_glyph_path(rect, glyph);
+        return ported_glyph_path(rect, glyph, transform);
     }
     match glyph.class_name.as_str() {
         "tag" => tag_path(rect, &glyph.orientation),
@@ -2544,7 +2633,6 @@ fn draw_js_arc<B: Backend>(
     if draw_line {
         let (line_start, line_end) =
             js_arc_line_endpoints(arc, start, end, glyph_lookup, port_parent_lookup);
-        let start_px = transform.map_point(line_start.x, line_start.y);
         let mut rendered_points = if arc.points.len() >= 2 {
             arc.points.clone()
         } else {
@@ -2556,11 +2644,26 @@ fn draw_js_arc<B: Backend>(
         if let Some(last) = rendered_points.last_mut() {
             *last = line_end;
         }
+        let mut rendered_points = rendered_points
+            .iter()
+            .map(|point| transform.map_point(point.x, point.y))
+            .collect::<Vec<_>>();
+        if js_arc_marker(&arc.class_name) == "double-tee" && rendered_points.len() >= 2 {
+            let last_index = rendered_points.len() - 1;
+            let (_, rear_offset) =
+                absolute_inhibition_bar_offsets(ARROW_SIZE * CYTOSCAPE_ARROW_SCALE);
+            if let Some(shortened) = point_before_endpoint(
+                rendered_points[last_index],
+                rendered_points[last_index - 1],
+                rear_offset,
+            ) {
+                rendered_points[last_index] = shortened;
+            }
+        }
         let mut builder = PathBuilder::new();
-        builder.move_to(start_px.x as f32, start_px.y as f32);
+        builder.move_to(rendered_points[0].x as f32, rendered_points[0].y as f32);
         for point in rendered_points.iter().skip(1) {
-            let point_px = transform.map_point(point.x, point.y);
-            builder.line_to(point_px.x as f32, point_px.y as f32);
+            builder.line_to(point.x as f32, point.y as f32);
         }
         if let Some(path) = builder.finish() {
             backend.draw_path(
@@ -2577,53 +2680,7 @@ fn draw_js_arc<B: Backend>(
         return;
     }
 
-    if arc.class_name == "interaction" {
-        let source_is_entity = arc
-            .source
-            .as_deref()
-            .and_then(|id| glyph_lookup.get(id).copied())
-            .is_some_and(|glyph| glyph.class_name == "entity");
-        let target_is_entity = arc
-            .target
-            .as_deref()
-            .and_then(|id| glyph_lookup.get(id).copied())
-            .is_some_and(|glyph| glyph.class_name == "entity");
-        let second = arc.points.get(1).copied().unwrap_or(end);
-        let penultimate = arc.points.iter().rev().nth(1).copied().unwrap_or(start);
-        let marker_size = ARROW_SIZE * CYTOSCAPE_ARROW_SCALE;
-        let triangle = &[
-            Point { x: -0.15, y: -0.3 },
-            Point { x: 0.0, y: 0.0 },
-            Point { x: 0.15, y: -0.3 },
-        ];
-        if source_is_entity {
-            draw_marker_polygon(
-                backend,
-                transform.map_point(start.x, start.y),
-                transform.map_point(second.x, second.y),
-                marker_size,
-                triangle,
-                Some(edge_color),
-                None,
-                0.0,
-            );
-        }
-        if target_is_entity {
-            draw_marker_polygon(
-                backend,
-                transform.map_point(end.x, end.y),
-                transform.map_point(penultimate.x, penultimate.y),
-                marker_size,
-                triangle,
-                Some(edge_color),
-                None,
-                0.0,
-            );
-        }
-        return;
-    }
-
-    let marker_point = js_arc_marker_point(arc, start, end);
+    let marker_point = js_arc_marker_point(arc, start, end, glyph_lookup, port_parent_lookup);
     let marker_previous = if (marker_point.x - end.x).hypot(marker_point.y - end.y) <= 1e-6 {
         arc.points.iter().rev().nth(1).copied().unwrap_or(start)
     } else {
@@ -2632,7 +2689,7 @@ fn draw_js_arc<B: Backend>(
     let end_px = transform.map_point(marker_point.x, marker_point.y);
     let previous_px = transform.map_point(marker_previous.x, marker_previous.y);
     let marker_size = ARROW_SIZE * CYTOSCAPE_ARROW_SCALE;
-    match js_arc_marker(&arc.class_name) {
+    match js_arc_marker_for_endpoints(arc, glyph_lookup, port_parent_lookup) {
         "barbed-arrow" => draw_marker_polygon(
             backend,
             end_px,
@@ -2681,12 +2738,13 @@ fn draw_js_arc<B: Backend>(
             JS_DEFAULT_EDGE_WIDTH,
         ),
         "double-tee" => {
+            let (front_offset, rear_offset) = absolute_inhibition_bar_offsets(marker_size);
             draw_inhibition_bar(
                 backend,
                 end_px,
                 previous_px,
                 marker_size * 0.3,
-                0.0,
+                front_offset,
                 edge_color,
                 JS_DEFAULT_EDGE_WIDTH,
             );
@@ -2695,10 +2753,27 @@ fn draw_js_arc<B: Backend>(
                 end_px,
                 previous_px,
                 marker_size * 0.3,
-                marker_size * 0.12,
+                rear_offset,
                 edge_color,
                 JS_DEFAULT_EDGE_WIDTH,
             );
+            if let Some((from, to)) =
+                absolute_inhibition_connector(end_px, previous_px, marker_size)
+            {
+                let mut builder = PathBuilder::new();
+                builder.move_to(from.x as f32, from.y as f32);
+                builder.line_to(to.x as f32, to.y as f32);
+                if let Some(path) = builder.finish() {
+                    backend.draw_path(
+                        &path,
+                        &DrawStyle {
+                            fill: None,
+                            stroke: Some(edge_color),
+                            stroke_width: JS_DEFAULT_EDGE_WIDTH,
+                        },
+                    );
+                }
+            }
         }
         "circle" => {
             let radius = (marker_size * 0.15).max(1.0);
@@ -3240,6 +3315,36 @@ fn draw_inhibition_bar<B: Backend>(
     );
 }
 
+fn absolute_inhibition_bar_offsets(marker_size: f64) -> (f64, f64) {
+    let gap = marker_size * 0.12;
+    (gap, gap * 2.0)
+}
+
+fn absolute_inhibition_connector(
+    end: Point,
+    previous: Point,
+    marker_size: f64,
+) -> Option<(Point, Point)> {
+    let (front_offset, rear_offset) = absolute_inhibition_bar_offsets(marker_size);
+    Some((
+        point_before_endpoint(end, previous, front_offset)?,
+        point_before_endpoint(end, previous, rear_offset)?,
+    ))
+}
+
+fn point_before_endpoint(end: Point, previous: Point, distance: f64) -> Option<Point> {
+    let dx = end.x - previous.x;
+    let dy = end.y - previous.y;
+    let length = dx.hypot(dy);
+    if length <= 1e-6 {
+        return None;
+    }
+    Some(Point {
+        x: end.x - dx / length * distance,
+        y: end.y - dy / length * distance,
+    })
+}
+
 fn rect_path(rect: PixelRect) -> SkPath {
     PathBuilder::from_rect(
         Rect::from_xywh(
@@ -3570,11 +3675,23 @@ fn perturbing_agent_path(rect: PixelRect) -> SkPath {
 fn is_ported_glyph_class(class_name: &str) -> bool {
     matches!(
         class_name,
-        "process" | "omitted process" | "uncertain process" | "association" | "dissociation"
+        "process"
+            | "omitted process"
+            | "uncertain process"
+            | "association"
+            | "dissociation"
+            | "and"
+            | "or"
+            | "not"
+            | "delay"
     )
 }
 
-fn ported_glyph_path(rect: PixelRect, glyph: &Glyph) -> SkPath {
+fn is_logical_operator_class(class_name: &str) -> bool {
+    matches!(class_name, "and" | "or" | "not" | "delay")
+}
+
+fn ported_glyph_path(rect: PixelRect, glyph: &Glyph, transform: &Transform) -> SkPath {
     let vertical = if glyph.ports.len() >= 2 {
         let min_x = glyph
             .ports
@@ -3600,8 +3717,12 @@ fn ported_glyph_path(rect: PixelRect, glyph: &Glyph) -> SkPath {
     } else {
         false
     };
-    let core_w = rect.width * 0.707071;
-    let core_h = rect.height * 0.707071;
+    let (core_w, core_h) = if is_logical_operator_class(&glyph.class_name) {
+        let size = JS_LOGICAL_NODE_SIZE * transform.scale_x.abs().min(transform.scale_y.abs());
+        (size, size)
+    } else {
+        (rect.width * 0.707071, rect.height * 0.707071)
+    };
     let core = PixelRect {
         x0: rect.center.x - core_w / 2.0,
         y0: rect.center.y - core_h / 2.0,
@@ -3609,10 +3730,8 @@ fn ported_glyph_path(rect: PixelRect, glyph: &Glyph) -> SkPath {
         height: core_h,
         center: rect.center,
     };
-    let core_circle = matches!(
-        glyph.class_name.as_str(),
-        "association" | "dissociation" | "and" | "or" | "not"
-    );
+    let core_circle = matches!(glyph.class_name.as_str(), "association" | "dissociation")
+        || is_logical_operator_class(&glyph.class_name);
     if !vertical {
         let line_half = (rect.height * 0.01).max(0.5) / 2.0;
         if core_circle {
@@ -4149,10 +4268,10 @@ fn compute_bounds(glyphs: &[Glyph], arcs: &[Arc]) -> Result<Bounds> {
     let mut x_values = Vec::new();
     let mut y_values = Vec::new();
     for glyph in glyphs {
-        if let Some(bbox) = glyph
-            .bbox
-            .filter(|_| !is_js_hidden_glyph_class(&glyph.class_name))
-        {
+        if let Some(bbox) = glyph.bbox.filter(|_| {
+            !is_js_hidden_glyph_class(&glyph.class_name)
+                || is_auxiliary_glyph_class(&glyph.class_name)
+        }) {
             x_values.push(bbox.x);
             x_values.push(bbox.x + bbox.w);
             y_values.push(bbox.y);
@@ -4220,6 +4339,78 @@ fn transform_with_padding(
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[derive(Default)]
+    struct RecordingBackend {
+        paths: Vec<Vec<Point>>,
+    }
+
+    impl Backend for RecordingBackend {
+        fn draw_path(&mut self, path: &SkPath, _style: &DrawStyle) {
+            let points = path
+                .segments()
+                .filter_map(|segment| match segment {
+                    tiny_skia::PathSegment::MoveTo(point)
+                    | tiny_skia::PathSegment::LineTo(point) => Some(Point {
+                        x: f64::from(point.x),
+                        y: f64::from(point.y),
+                    }),
+                    _ => None,
+                })
+                .collect();
+            self.paths.push(points);
+        }
+
+        fn draw_path_clipped(&mut self, path: &SkPath, style: &DrawStyle, _clip_path: &SkPath) {
+            self.draw_path(path, style);
+        }
+
+        fn draw_text_centered(&mut self, _center: Point, _text: &str, _font_px: f64, _color: Rgba) {
+        }
+
+        fn draw_text_bottom_centered(
+            &mut self,
+            _rect: PixelRect,
+            _text: &str,
+            _font_px: f64,
+            _color: Rgba,
+        ) {
+        }
+
+        fn measure_text_width(&self, _text: &str, _font_px: f64) -> f64 {
+            0.0
+        }
+    }
+
+    fn test_glyph(id: &str, class_name: &str, bbox: Option<BBox>) -> Glyph {
+        Glyph {
+            id: id.to_string(),
+            parent_id: None,
+            class_name: class_name.to_string(),
+            bbox,
+            extra_width: None,
+            extra_height: None,
+            label: String::new(),
+            ports: Vec::new(),
+            has_clone: false,
+            state_value: None,
+            state_variable: None,
+            entity_name: String::new(),
+            orientation: "right".to_string(),
+            callout: None,
+        }
+    }
+
+    fn identity_transform() -> Transform {
+        Transform {
+            min_x: 0.0,
+            min_y: 0.0,
+            scale_x: 1.0,
+            scale_y: 1.0,
+            offset_x: 0.0,
+            offset_y: 0.0,
+        }
+    }
 
     fn parse_example(source: &str) -> (Vec<Glyph>, Vec<Arc>, Bounds) {
         let root = Element::parse(source.as_bytes()).expect("example XML should parse");
@@ -4393,6 +4584,389 @@ mod tests {
     }
 
     #[test]
+    fn pure_er_interaction_draws_no_terminal_triangles() {
+        let source = test_glyph(
+            "source",
+            "entity",
+            Some(BBox {
+                x: 0.0,
+                y: 0.0,
+                w: 20.0,
+                h: 20.0,
+            }),
+        );
+        let target = test_glyph(
+            "target",
+            "entity",
+            Some(BBox {
+                x: 80.0,
+                y: 0.0,
+                w: 20.0,
+                h: 20.0,
+            }),
+        );
+        let arc = Arc {
+            id: "interaction".to_string(),
+            class_name: "interaction".to_string(),
+            source: Some("source".to_string()),
+            target: Some("target".to_string()),
+            points: vec![Point { x: 20.0, y: 10.0 }, Point { x: 80.0, y: 10.0 }],
+            auxiliary_glyphs: Vec::new(),
+        };
+        let glyph_lookup = HashMap::from([("source", &source), ("target", &target)]);
+        let mut backend = RecordingBackend::default();
+
+        draw_js_arc(
+            &mut backend,
+            &identity_transform(),
+            &arc,
+            &glyph_lookup,
+            &HashMap::new(),
+            None,
+            false,
+            true,
+        );
+
+        assert!(
+            backend.paths.is_empty(),
+            "interaction rendered marker paths"
+        );
+    }
+
+    #[test]
+    fn assignment_to_implicit_xor_draws_no_marker() {
+        let value = test_glyph("value", "state variable", None);
+        let merge = test_glyph("merge", "implicit xor", None);
+        let arc = Arc {
+            id: "branch".to_string(),
+            class_name: "assignment".to_string(),
+            source: Some("value".to_string()),
+            target: Some("merge".to_string()),
+            points: vec![Point { x: 10.0, y: 10.0 }, Point { x: 30.0, y: 10.0 }],
+            auxiliary_glyphs: Vec::new(),
+        };
+        let glyph_lookup = HashMap::from([("value", &value), ("merge", &merge)]);
+        let mut backend = RecordingBackend::default();
+
+        draw_js_arc(
+            &mut backend,
+            &identity_transform(),
+            &arc,
+            &glyph_lookup,
+            &HashMap::new(),
+            None,
+            false,
+            true,
+        );
+
+        assert!(backend.paths.is_empty(), "implicit xor received a barb");
+    }
+
+    #[test]
+    fn absolute_inhibition_uses_spaced_bars_connector_and_shortened_stem() {
+        let arc = Arc {
+            id: "absolute".to_string(),
+            class_name: "absolute inhibition".to_string(),
+            source: Some("source".to_string()),
+            target: Some("target".to_string()),
+            points: vec![Point { x: 0.0, y: 10.0 }, Point { x: 100.0, y: 10.0 }],
+            auxiliary_glyphs: Vec::new(),
+        };
+        let mut backend = RecordingBackend::default();
+
+        draw_js_arc(
+            &mut backend,
+            &identity_transform(),
+            &arc,
+            &HashMap::new(),
+            &HashMap::new(),
+            None,
+            true,
+            true,
+        );
+
+        assert_eq!(backend.paths.len(), 4, "line, two bars, and connector");
+        let marker_size = ARROW_SIZE * CYTOSCAPE_ARROW_SCALE;
+        let expected_rear_x = 100.0 - marker_size * 0.24;
+        assert!((backend.paths[0].last().unwrap().x - expected_rear_x).abs() < 1e-5);
+        assert_eq!(backend.paths[3].len(), 2);
+    }
+
+    #[test]
+    fn location_uses_truncated_center_diagonal_and_offset_chord() {
+        let mut glyph = test_glyph(
+            "location",
+            "location",
+            Some(BBox {
+                x: 10.0,
+                y: 20.0,
+                w: 20.0,
+                h: 20.0,
+            }),
+        );
+        glyph.parent_id = Some("entity".to_string());
+        let mut backend = RecordingBackend::default();
+
+        assert!(draw_auxiliary_glyph(
+            &mut backend,
+            &identity_transform(),
+            &glyph
+        ));
+
+        assert_eq!(backend.paths.len(), 3);
+        let diagonal = &backend.paths[1];
+        let chord = &backend.paths[2];
+        let chord_midpoint = Point {
+            x: (chord[0].x + chord[1].x) / 2.0,
+            y: (chord[0].y + chord[1].y) / 2.0,
+        };
+        assert!((diagonal[0].x - chord_midpoint.x).abs() < 1e-5);
+        assert!((diagonal[0].y - chord_midpoint.y).abs() < 1e-5);
+        let dx = diagonal[1].x - diagonal[0].x;
+        let dy = diagonal[1].y - diagonal[0].y;
+        let center_cross = (20.0 - diagonal[0].x) * dy - (30.0 - diagonal[0].y) * dx;
+        assert!(center_cross.abs() < 1e-5);
+        assert!(
+            ((chord_midpoint.x - 20.0).hypot(chord_midpoint.y - 30.0) - 10.0 / 3.0).abs() < 1e-5
+        );
+    }
+
+    #[test]
+    fn standalone_state_variables_use_circle_or_stadium_and_are_drawn() {
+        let square = test_glyph(
+            "square",
+            "state variable",
+            Some(BBox {
+                x: 0.0,
+                y: 0.0,
+                w: 20.0,
+                h: 20.0,
+            }),
+        );
+        let wide = test_glyph(
+            "wide",
+            "state variable",
+            Some(BBox {
+                x: 0.0,
+                y: 0.0,
+                w: 36.0,
+                h: 20.0,
+            }),
+        );
+        assert_eq!(auxiliary_glyph_shape(&square), "ellipse");
+        assert_eq!(auxiliary_glyph_shape(&wide), "stadium_round_rectangle");
+
+        let mut backend = RecordingBackend::default();
+        assert!(draw_auxiliary_glyph(
+            &mut backend,
+            &identity_transform(),
+            &square
+        ));
+        assert_eq!(backend.paths.len(), 1);
+    }
+
+    #[test]
+    fn fitted_bounds_include_nested_auxiliary_glyphs() {
+        let entity = test_glyph(
+            "entity",
+            "entity",
+            Some(BBox {
+                x: 0.0,
+                y: 100.0,
+                w: 100.0,
+                h: 50.0,
+            }),
+        );
+        let mut value = test_glyph(
+            "value",
+            "state variable",
+            Some(BBox {
+                x: 20.0,
+                y: 0.0,
+                w: 60.0,
+                h: 20.0,
+            }),
+        );
+        value.parent_id = Some("entity".to_string());
+
+        let bounds = compute_bounds(&[entity, value], &[]).expect("bounds should resolve");
+
+        assert_eq!(bounds.min_y, 0.0);
+    }
+
+    #[test]
+    fn influence_marker_tip_touches_unresolved_arc_target() {
+        let arc = Arc {
+            id: "stimulation".to_string(),
+            class_name: "stimulation".to_string(),
+            source: Some("outcome".to_string()),
+            target: Some("arc-port".to_string()),
+            points: vec![
+                Point { x: 10.0, y: 10.0 },
+                Point { x: 20.0, y: 10.0 },
+                Point { x: 30.0, y: 10.0 },
+            ],
+            auxiliary_glyphs: Vec::new(),
+        };
+        let mut backend = RecordingBackend::default();
+
+        draw_js_arc(
+            &mut backend,
+            &identity_transform(),
+            &arc,
+            &HashMap::new(),
+            &HashMap::new(),
+            None,
+            false,
+            true,
+        );
+
+        let marker_tip_x = backend.paths[0]
+            .iter()
+            .map(|point| point.x)
+            .fold(f64::NEG_INFINITY, f64::max);
+        assert!((marker_tip_x - 30.0).abs() < 1e-5);
+    }
+
+    #[test]
+    fn explicit_delay_endpoints_snap_to_declared_ports() {
+        let mut delay = test_glyph(
+            "delay",
+            "delay",
+            Some(BBox {
+                x: 20.0,
+                y: 20.0,
+                w: 42.0,
+                h: 42.0,
+            }),
+        );
+        delay.ports = vec![
+            Port {
+                id: "delay.in".to_string(),
+                x: 62.0,
+                y: 41.0,
+            },
+            Port {
+                id: "delay.out".to_string(),
+                x: 20.0,
+                y: 41.0,
+            },
+        ];
+        let target = test_glyph(
+            "target",
+            "process",
+            Some(BBox {
+                x: 0.0,
+                y: 80.0,
+                w: 20.0,
+                h: 20.0,
+            }),
+        );
+        let glyph_lookup = HashMap::from([("delay", &delay), ("target", &target)]);
+        let port_lookup = HashMap::from([("delay.in", "delay"), ("delay.out", "delay")]);
+        let incoming = Arc {
+            id: "incoming".to_string(),
+            class_name: "logic arc".to_string(),
+            source: Some("target".to_string()),
+            target: Some("delay.in".to_string()),
+            points: vec![Point { x: 10.0, y: 90.0 }, Point { x: 41.0, y: 41.0 }],
+            auxiliary_glyphs: Vec::new(),
+        };
+        let outgoing = Arc {
+            id: "outgoing".to_string(),
+            class_name: "necessary stimulation".to_string(),
+            source: Some("delay.out".to_string()),
+            target: Some("target".to_string()),
+            points: vec![Point { x: 41.0, y: 41.0 }, Point { x: 10.0, y: 90.0 }],
+            auxiliary_glyphs: Vec::new(),
+        };
+
+        let (_, incoming_end, _, _) = js_arc_points(&incoming, &glyph_lookup, &port_lookup)
+            .expect("incoming delay arc should resolve");
+        let (outgoing_start, _, _, _) = js_arc_points(&outgoing, &glyph_lookup, &port_lookup)
+            .expect("outgoing delay arc should resolve");
+
+        assert_eq!(incoming_end.x, 62.0);
+        assert_eq!(incoming_end.y, 41.0);
+        assert_eq!(outgoing_start.x, 20.0);
+        assert_eq!(outgoing_start.y, 41.0);
+    }
+
+    #[test]
+    fn delay_uses_a_ported_logical_operator_outline() {
+        let mut delay = test_glyph(
+            "delay",
+            "delay",
+            Some(BBox {
+                x: 20.0,
+                y: 20.0,
+                w: 42.0,
+                h: 42.0,
+            }),
+        );
+        delay.ports = vec![
+            Port {
+                id: "delay.in".to_string(),
+                x: 62.0,
+                y: 41.0,
+            },
+            Port {
+                id: "delay.out".to_string(),
+                x: 20.0,
+                y: 41.0,
+            },
+        ];
+        let rect = sbgnviz_manifest_rect(&delay);
+        let path = js_shape_path_for_glyph(rect, "ellipse", &delay, &identity_transform());
+
+        assert!(is_ported_glyph_class("delay"));
+        assert_eq!(rect.width, 42.0);
+        assert!(
+            path.segments().count() > 50,
+            "delay outline lacks circular core and stubs"
+        );
+    }
+
+    #[test]
+    fn logic_arc_to_outcome_retains_explicit_center_endpoint() {
+        let source = test_glyph(
+            "source",
+            "state variable",
+            Some(BBox {
+                x: 0.0,
+                y: 0.0,
+                w: 20.0,
+                h: 20.0,
+            }),
+        );
+        let outcome = test_glyph(
+            "outcome",
+            "outcome",
+            Some(BBox {
+                x: 40.0,
+                y: 30.0,
+                w: 20.0,
+                h: 20.0,
+            }),
+        );
+        let arc = Arc {
+            id: "logic".to_string(),
+            class_name: "logic arc".to_string(),
+            source: Some("source".to_string()),
+            target: Some("outcome".to_string()),
+            points: vec![Point { x: 10.0, y: 20.0 }, Point { x: 50.0, y: 40.0 }],
+            auxiliary_glyphs: Vec::new(),
+        };
+        let glyph_lookup = HashMap::from([("source", &source), ("outcome", &outcome)]);
+
+        let (_, end, _, _) =
+            js_arc_points(&arc, &glyph_lookup, &HashMap::new()).expect("logic arc should resolve");
+
+        assert_eq!(end.x, 50.0);
+        assert_eq!(end.y, 40.0);
+    }
+
+    #[test]
     fn preserves_nested_entity_parentage() {
         let (glyphs, _, _) = parse_example(include_str!("../../examples/nested_entity.sbgn"));
         let child = glyphs
@@ -4409,7 +4983,7 @@ mod tests {
         assert_eq!(js_arc_marker("interaction"), "none");
         assert_eq!(js_arc_marker("modulation"), "diamond");
         assert_eq!(js_arc_marker("necessary stimulation"), "triangle-cross");
-        assert_eq!(js_arc_marker("absolute stimulation"), "double-triangle");
+        assert_eq!(js_arc_marker("absolute stimulation"), "triangle");
         assert_eq!(js_arc_marker("absolute inhibition"), "double-tee");
         assert_eq!(js_arc_marker("logic arc"), "none");
     }
@@ -4425,19 +4999,8 @@ mod tests {
     }
 
     #[test]
-    fn absolute_stimulation_triangles_are_separated_and_aligned() {
-        let marker_size = 10.0;
-        let [(front_tip, front_behind), (rear_tip, rear_behind)] = double_triangle_anchors(
-            Point { x: 10.0, y: 0.0 },
-            Point { x: 0.0, y: 0.0 },
-            marker_size,
-        )
-        .expect("nonzero direction should produce marker anchors");
-
-        assert!(front_tip.x > front_behind.x);
-        assert!(rear_tip.x > rear_behind.x);
-        assert_eq!(front_tip.y, rear_tip.y);
-        assert!(front_tip.x - rear_tip.x > marker_size * 0.3);
+    fn absolute_stimulation_uses_the_go_triangle_marker() {
+        assert_eq!(js_arc_marker("absolute stimulation"), "triangle");
     }
 
     #[test]

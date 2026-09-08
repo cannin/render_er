@@ -14,7 +14,7 @@ If pycairo cannot find Cairo, install the platform's Cairo development package
 first.
 
 Alternatively, download the `.whl` file from the
-[project releases](https://github.com/cannin/render_sbgn/releases) and install
+[project releases](https://github.com/cannin/render_er/releases) and install
 it with `python -m pip install ./render_sbgn_py-<version>-py3-none-any.whl`.
 
 ## Usage

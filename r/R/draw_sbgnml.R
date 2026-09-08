@@ -27,6 +27,7 @@ renderer_state$show_process_node_labels <- FALSE
 renderer_state$render_scale <- 1
 renderer_state$auto_contrast_text <- TRUE
 renderer_state$style_config <- NULL
+renderer_state$background_color <- "#ffffff"
 
 JS_NODE_FILL_COLOR <- "#ffffff"
 JS_NODE_BORDER_COLOR <- "#555555"
@@ -223,6 +224,17 @@ state_variable_label <- function(value, variable) {
   paste(parts, collapse = "@")
 }
 
+#' Estimate the manifest width of one rendered label.
+#'
+#' @param label Label text.
+#' @param font_px Font size in pixels.
+#'
+#' @return Estimated label width.
+#' @noRd
+estimate_label_width <- function(label, font_px) {
+  max(1, nchar(trimws(label), type = "chars") * font_px * 0.6)
+}
+
 #' Compute bounds spanning visible glyphs and arcs.
 #'
 #' @param glyphs List of parsed glyph records.
@@ -239,7 +251,8 @@ compute_bounds <- function(glyphs, arcs) {
     if (
       !is.null(bbox) &&
         !is.na(bbox$x) &&
-        !is_js_hidden_glyph_class(glyph$class)
+        (!is_js_hidden_glyph_class(glyph$class) ||
+           is_auxiliary_glyph_class(glyph$class))
     ) {
       x_values <- c(x_values, bbox$x, bbox$x + bbox$w)
       y_values <- c(y_values, bbox$y, bbox$y + bbox$h)
@@ -256,6 +269,167 @@ compute_bounds <- function(glyphs, arcs) {
     min_y = min(y_values),
     max_y = max(y_values)
   )
+}
+
+#' Check whether a glyph uses the auxiliary-glyph rendering path.
+#'
+#' @param class_name SBGN glyph class.
+#'
+#' @return Logical scalar.
+#' @noRd
+is_auxiliary_glyph_class <- function(class_name) {
+  class_name %in% c(
+    "unit of information",
+    "state variable",
+    "existence",
+    "location"
+  )
+}
+
+#' Normalize a CSS hexadecimal color for R graphics.
+#'
+#' @param value CSS color value.
+#'
+#' @return Normalized hexadecimal color or NULL when unsupported.
+#' @noRd
+normalize_hex_color <- function(value) {
+  if (is.null(value) || is.na(value)) {
+    return(NULL)
+  }
+  value <- trimws(value)
+  if (!startsWith(value, "#")) {
+    return(NULL)
+  }
+  digits <- substring(value, 2)
+  if (!grepl("^[[:xdigit:]]+$", digits)) {
+    return(NULL)
+  }
+  if (nchar(digits) %in% c(3, 4)) {
+    digits <- paste0(strsplit(digits, "", fixed = TRUE)[[1]], collapse = "")
+    digits <- paste0(rep(strsplit(digits, "", fixed = TRUE)[[1]], each = 2), collapse = "")
+  }
+  if (!(nchar(digits) %in% c(6, 8))) {
+    return(NULL)
+  }
+  paste0("#", tolower(digits))
+}
+
+#' Resolve a renderInformation color token.
+#'
+#' @param value Color definition id or CSS hexadecimal color.
+#' @param colors Named list of parsed color definitions.
+#'
+#' @return Normalized color string or NULL.
+#' @noRd
+resolve_render_color <- function(value, colors = list()) {
+  if (is.null(value) || is.na(value)) {
+    return(NULL)
+  }
+  value <- trimws(value)
+  if (value == "" || tolower(value) == "none") {
+    return(NULL)
+  }
+  if (value %in% names(colors)) {
+    return(colors[[value]])
+  }
+  normalize_hex_color(value)
+}
+
+#' Return the active page background color.
+#'
+#' @param parsed Parsed SBGN data.
+#' @param style_config Optional renderer style configuration.
+#'
+#' @return R-compatible color string.
+#' @noRd
+render_background_color <- function(parsed, style_config = NULL) {
+  configured <- if (is.null(style_config)) {
+    NULL
+  } else {
+    normalize_hex_color(style_config$background_color)
+  }
+  if (!is.null(configured)) {
+    return(configured)
+  }
+  embedded <- parsed$render_info$background_color
+  if (!is.null(embedded)) embedded else "#ffffff"
+}
+
+#' Parse optional SBGN renderInformation metadata.
+#'
+#' @param input_path Path to an SBGN-ML document.
+#'
+#' @return List containing background, color definitions, and styles.
+#' @noRd
+parse_render_information <- function(input_path) {
+  doc <- read_xml(input_path)
+  render_node <- xml_find_first(doc, ".//*[local-name()='renderInformation']")
+  result <- list(
+    background_color = NULL,
+    colors = list(),
+    default_style = NULL,
+    styles = list()
+  )
+  if (inherits(render_node, "xml_missing")) {
+    return(result)
+  }
+
+  color_nodes <- xml_find_all(
+    render_node,
+    ".//*[local-name()='colorDefinition']"
+  )
+  for (color_node in color_nodes) {
+    id <- xml_attr(color_node, "id")
+    value <- normalize_hex_color(xml_attr(color_node, "value"))
+    if (!is.na(id) && nzchar(id) && !is.null(value)) {
+      result$colors[[id]] <- value
+    }
+  }
+  background <- resolve_render_color(
+    xml_attr(render_node, "background-color"),
+    result$colors
+  )
+  if (!is.null(background)) {
+    result$background_color <- background
+  }
+
+  style_nodes <- xml_find_all(render_node, ".//*[local-name()='style']")
+  for (style_node in style_nodes) {
+    graphic_node <- xml_find_first(style_node, "./*[local-name()='g']")
+    style <- list()
+    if (!inherits(graphic_node, "xml_missing")) {
+      optional_number <- function(attribute) {
+        value <- xml_attr(graphic_node, attribute)
+        if (is.na(value) || trimws(value) == "") NULL else as.numeric(value)
+      }
+      style$font_size <- optional_number("font-size")
+      font_family <- xml_attr(graphic_node, "font-family")
+      style$font_family <- if (is.na(font_family)) "" else font_family
+      style$font_color <- resolve_render_color(
+        xml_attr(graphic_node, "font-color"),
+        result$colors
+      )
+      style$stroke_color <- resolve_render_color(
+        xml_attr(graphic_node, "stroke"),
+        result$colors
+      )
+      style$stroke_width <- optional_number("stroke-width")
+      style$fill_color <- resolve_render_color(
+        xml_attr(graphic_node, "fill"),
+        result$colors
+      )
+      style$background_opacity <- optional_number("background-opacity")
+    }
+    id_list <- xml_attr(style_node, "idList")
+    if (is.na(id_list) || trimws(id_list) == "") {
+      result$default_style <- style
+    } else {
+      for (id in strsplit(trimws(id_list), "[[:space:]]+")[[1]]) {
+        result$styles[[id]] <- style
+      }
+    }
+  }
+  result
 }
 
 #' Extract bounding box values from a glyph node.
@@ -473,7 +647,12 @@ parse_sbgn <- function(input_path) {
   }
 
   bounds <- compute_bounds(glyphs, arcs)
-  list(glyphs = glyphs, arcs = arcs, bounds = bounds)
+  list(
+    glyphs = glyphs,
+    arcs = arcs,
+    bounds = bounds,
+    render_info = parse_render_information(input_path)
+  )
 }
 
 #' Convert a bbox to a pixel rect list.
@@ -518,16 +697,15 @@ sbgnviz_manifest_rect <- function(glyph) {
     } else {
       JS_COMPLEX_BORDER_WIDTH
     }
-    expansion <- 2 * padding + border_width + 2
     width <- if (!is.null(glyph$extra_width) && !is.na(glyph$extra_width)) {
-      glyph$extra_width + expansion
+      glyph$extra_width + 2 * padding + border_width + 2
     } else {
-      glyph$bbox$w + expansion
+      glyph$bbox$w + border_width + 2
     }
     height <- if (!is.null(glyph$extra_height) && !is.na(glyph$extra_height)) {
-      glyph$extra_height + expansion
+      glyph$extra_height + 2 * padding + border_width + 2
     } else {
-      glyph$bbox$h + expansion
+      glyph$bbox$h + border_width + 2
     }
   } else if (
     !is.null(glyph$extra_width) &&
@@ -584,7 +762,8 @@ is_ported_glyph_class <- function(class_name) {
     "dissociation",
     "and",
     "or",
-    "not"
+    "not",
+    "delay"
   )
 }
 
@@ -833,6 +1012,26 @@ perturbing_agent_points <- function(rect) {
   )
 }
 
+#' Return the process or logical core inside the full port span.
+#'
+#' @param rect Rectangle spanning the complete ported glyph.
+#' @param glyph Parsed glyph record.
+#'
+#' @return Pixel/source rectangle for the glyph core.
+#' @noRd
+ported_glyph_core_rect <- function(rect, glyph) {
+  logical_class <- glyph$class %in% c("and", "or", "not", "delay")
+  core_width <- if (logical_class) 21 else rect$width * 0.707071
+  core_height <- if (logical_class) 21 else rect$height * 0.707071
+  list(
+    x0 = rect$center$x - core_width / 2,
+    y0 = rect$center$y - core_height / 2,
+    width = core_width,
+    height = core_height,
+    center = rect$center
+  )
+}
+
 #' Build the process or logical-operator core with integrated port stubs.
 #'
 #' @param rect Pixel rectangle spanning the glyph ports.
@@ -850,21 +1049,14 @@ ported_glyph_points <- function(rect, glyph) {
     }
   }
 
-  core_width <- rect$width * 0.707071
-  core_height <- rect$height * 0.707071
-  core <- list(
-    x0 = rect$center$x - core_width / 2,
-    y0 = rect$center$y - core_height / 2,
-    width = core_width,
-    height = core_height,
-    center = rect$center
-  )
+  core <- ported_glyph_core_rect(rect, glyph)
   core_circle <- glyph$class %in% c(
     "association",
     "dissociation",
     "and",
     "or",
-    "not"
+    "not",
+    "delay"
   )
 
   if (orientation == "horizontal") {
@@ -1061,7 +1253,14 @@ draw_text_centered <- function(
 #' @return A logical scalar.
 #' @noRd
 is_js_hidden_glyph_class <- function(class_name) {
-  class_name %in% c("unit of information", "state variable", "terminal")
+  class_name %in% c(
+    "unit of information",
+    "state variable",
+    "existence",
+    "location",
+    "implicit xor",
+    "terminal"
+  )
 }
 
 #' Choose the JavaScript renderer text color for a glyph color fill.
@@ -1296,7 +1495,7 @@ js_glyph_style <- function(
     style$label <- ""
   }
   if (class_name == "variable value") {
-    style$shape <- "simple chemical"
+    style$shape <- "stadium_round_rectangle"
   }
   if (class_name == "source and sink") {
     style$shape <- "empty set"
@@ -1407,7 +1606,7 @@ js_shape_points <- function(glyph, rect, style) {
   if (style$shape == "ellipse" || style$shape == "empty set") {
     return(ellipse_points(rect$center$x, rect$center$y, rect$width / 2, rect$height / 2, 80))
   }
-  if (style$shape == "simple chemical") {
+  if (style$shape %in% c("simple chemical", "stadium_round_rectangle")) {
     return(stadium_points(rect))
   }
   if (style$shape == "rectangle") {
@@ -1445,8 +1644,20 @@ js_shape_points <- function(glyph, rect, style) {
 #' @return Primitive shape name used by rendering and manifests.
 #' @noRd
 auxiliary_glyph_shape <- function(glyph) {
+  if (glyph$class == "state variable" && is.null(glyph$parent_id)) {
+    if (
+      !is.null(glyph$bbox) &&
+        abs(glyph$bbox$w - glyph$bbox$h) > 1e-6
+    ) {
+      return("stadium_round_rectangle")
+    }
+    return("ellipse")
+  }
   if (glyph$class == "state variable") {
     return("stadium_round_rectangle")
+  }
+  if (glyph$class %in% c("existence", "location")) {
+    return("ellipse")
   }
   entity_name <- if (is.null(glyph$entity_name)) {
     ""
@@ -1473,14 +1684,27 @@ auxiliary_glyph_shape <- function(glyph) {
 #' @return A logical scalar indicating whether the glyph was handled.
 #' @noRd
 draw_auxiliary_glyph <- function(glyph) {
-  if (!(glyph$class %in% c("unit of information", "state variable"))) {
+  if (!is_auxiliary_glyph_class(glyph$class)) {
     return(FALSE)
   }
-  if (is.null(glyph$parent_id) || is.null(glyph$bbox)) {
+  if (
+    is.null(glyph$bbox) ||
+      (is.null(glyph$parent_id) && glyph$class != "state variable")
+  ) {
     return(TRUE)
   }
 
   glyph_rect <- bbox_pixel_rect(glyph$bbox)
+  if (glyph$class %in% c("existence", "location")) {
+    diameter <- min(glyph_rect$width, glyph_rect$height)
+    glyph_rect <- list(
+      x0 = glyph_rect$center$x - diameter / 2,
+      y0 = glyph_rect$center$y - diameter / 2,
+      width = diameter,
+      height = diameter,
+      center = glyph_rect$center
+    )
+  }
   shape <- auxiliary_glyph_shape(glyph)
   points <- if (shape == "stadium_round_rectangle") {
     stadium_points(glyph_rect)
@@ -1530,6 +1754,44 @@ draw_auxiliary_glyph <- function(glyph) {
     border = JS_NODE_BORDER_COLOR,
     lwd = JS_DEFAULT_NODE_BORDER_WIDTH
   )
+  if (glyph$class == "existence") {
+    theta <- seq(-pi / 2, pi / 2, length.out = 41)
+    right_half <- data.frame(
+      x = c(
+        glyph_rect$center$x,
+        glyph_rect$center$x + glyph_rect$width / 2 * cos(theta)
+      ),
+      y = c(
+        glyph_rect$y0,
+        glyph_rect$center$y + glyph_rect$height / 2 * sin(theta)
+      )
+    )
+    polygon(
+      right_half$x,
+      right_half$y,
+      col = JS_NODE_BORDER_COLOR,
+      border = NA
+    )
+    polygon(
+      points$x,
+      points$y,
+      col = NA,
+      border = JS_NODE_BORDER_COLOR,
+      lwd = JS_DEFAULT_NODE_BORDER_WIDTH
+    )
+  }
+  if (glyph$class == "location") {
+    for (line in location_cross_lines(glyph_rect)) {
+      segments(
+        line$from$x,
+        line$from$y,
+        line$to$x,
+        line$to$y,
+        col = JS_NODE_BORDER_COLOR,
+        lwd = JS_DEFAULT_NODE_BORDER_WIDTH
+      )
+    }
+  }
   label <- if (glyph$class == "state variable") {
     state_variable_label(glyph$state_value, glyph$state_variable)
   } else {
@@ -1545,6 +1807,43 @@ draw_auxiliary_glyph <- function(glyph) {
     )
   }
   TRUE
+}
+
+#' Return the truncated diameter and offset chord for a location glyph.
+#'
+#' @param rect Pixel/source rectangle for a circular location glyph.
+#'
+#' @return Two line records containing from and to points.
+#' @noRd
+location_cross_lines <- function(rect) {
+  radius <- min(rect$width, rect$height) / 2
+  diagonal_radius <- radius * sqrt(0.5)
+  chord_offset <- radius / 3
+  chord_midpoint <- list(
+    x = rect$center$x - chord_offset * sqrt(0.5),
+    y = rect$center$y - chord_offset * sqrt(0.5)
+  )
+  chord_half_length <- sqrt(radius^2 - chord_offset^2)
+  chord_delta <- chord_half_length * sqrt(0.5)
+  list(
+    list(
+      from = chord_midpoint,
+      to = list(
+        x = rect$center$x + diagonal_radius,
+        y = rect$center$y + diagonal_radius
+      )
+    ),
+    list(
+      from = list(
+        x = chord_midpoint$x - chord_delta,
+        y = chord_midpoint$y + chord_delta
+      ),
+      to = list(
+        x = chord_midpoint$x + chord_delta,
+        y = chord_midpoint$y - chord_delta
+      )
+    )
+  )
 }
 
 #' Clip polygon points to the portion at or below a horizontal boundary.
@@ -1874,6 +2173,21 @@ js_arc_points <- function(arc, glyph_lookup, port_parent_lookup) {
       if (
         !is.null(reference) &&
           !is.na(reference) &&
+          reference %in% names(port_parent_lookup) &&
+          !is.null(glyph_id) &&
+          glyph_id %in% names(glyph_lookup) &&
+          is_ported_glyph_class(glyph_lookup[[glyph_id]]$class)
+      ) {
+        port <- js_port_point(glyph_lookup[[glyph_id]], reference)
+        if (!is.null(port)) {
+          points$x[endpoint_spec$index] <- port$x
+          points$y[endpoint_spec$index] <- port$y
+        }
+        next
+      }
+      if (
+        !is.null(reference) &&
+          !is.na(reference) &&
           !(reference %in% names(port_parent_lookup)) &&
           !is.null(glyph_id) &&
           glyph_id %in% names(glyph_lookup)
@@ -1903,6 +2217,13 @@ js_arc_points <- function(arc, glyph_lookup, port_parent_lookup) {
           }
         }
         if (is.null(other)) {
+          next
+        }
+        if (
+          identical(arc$class, "logic arc") &&
+            endpoint_spec$step < 0 &&
+            identical(glyph$class, "outcome")
+        ) {
           next
         }
         nested_glyphs <- Filter(
@@ -1981,10 +2302,13 @@ js_arc_points <- function(arc, glyph_lookup, port_parent_lookup) {
     if (
       !is.null(reference) &&
         !is.na(reference) &&
-        reference %in% names(port_parent_lookup) &&
-        !is_ported_glyph_class(glyph$class)
+        reference %in% names(port_parent_lookup)
     ) {
-      endpoint <- js_non_cytoscape_port_endpoint(glyph, reference)
+      endpoint <- if (is_ported_glyph_class(glyph$class)) {
+        js_port_point(glyph, reference)
+      } else {
+        js_non_cytoscape_port_endpoint(glyph, reference)
+      }
       if (!is.null(endpoint)) {
         points$x[endpoint_spec$index] <- endpoint$x
         points$y[endpoint_spec$index] <- endpoint$y
@@ -1996,6 +2320,24 @@ js_arc_points <- function(arc, glyph_lookup, port_parent_lookup) {
   points$glyph_id[1] <- source_id
   points$glyph_id[nrow(points)] <- target_id
   points
+}
+
+#' Return a declared port coordinate for a glyph.
+#'
+#' @param glyph Glyph owning the port.
+#' @param port_id Port identifier.
+#'
+#' @return List with x and y, or NULL when the port does not exist.
+#' @noRd
+js_port_point <- function(glyph, port_id) {
+  if (is.null(glyph) || is.null(glyph$ports) || nrow(glyph$ports) == 0) {
+    return(NULL)
+  }
+  port_index <- match(port_id, glyph$ports$id)
+  if (is.na(port_index)) {
+    return(NULL)
+  }
+  list(x = glyph$ports$x[port_index], y = glyph$ports$y[port_index])
 }
 
 #' Clip a non-Cytoscape-ported endpoint to its painted node boundary.
@@ -2095,6 +2437,12 @@ js_arc_marker <- function(arc_class) {
   if (arc_class %in% c("inhibition", "negative influence")) {
     return("tee")
   }
+  if (arc_class == "assignment") {
+    return("barbed-arrow")
+  }
+  if (arc_class == "absolute inhibition") {
+    return("double-tee")
+  }
   if (arc_class == "catalysis") {
     return("circle")
   }
@@ -2105,6 +2453,52 @@ js_arc_marker <- function(arc_class) {
     return("triangle-cross")
   }
   "triangle"
+}
+
+#' Return the target marker after applying endpoint-specific ER rules.
+#'
+#' @param arc Arc record.
+#' @param glyph_lookup Named glyph lookup.
+#' @param port_parent_lookup Named port-owner lookup.
+#'
+#' @return Marker type string.
+#' @noRd
+js_arc_marker_for_endpoints <- function(
+  arc,
+  glyph_lookup,
+  port_parent_lookup
+) {
+  marker <- js_arc_marker(arc$class)
+  target_id <- js_endpoint_glyph_id(arc$target, port_parent_lookup)
+  if (
+    marker == "barbed-arrow" &&
+      !is.null(target_id) &&
+      target_id %in% names(glyph_lookup) &&
+      identical(glyph_lookup[[target_id]]$class, "implicit xor")
+  ) {
+    return("none")
+  }
+  marker
+}
+
+#' Return source and target marker types for an arc.
+#'
+#' @param arc Arc record.
+#' @param glyph_lookup Named glyph lookup.
+#' @param port_parent_lookup Named port-owner lookup.
+#'
+#' @return Named character vector with source and target markers.
+#' @noRd
+js_arc_endpoint_markers <- function(arc, glyph_lookup, port_parent_lookup) {
+  marker <- js_arc_marker_for_endpoints(
+    arc,
+    glyph_lookup,
+    port_parent_lookup
+  )
+  if (identical(arc$class, "interaction")) {
+    return(c(source = "none", target = "none"))
+  }
+  c(source = "none", target = marker)
 }
 
 #' Return the Go-compatible marker-tip displacement in source units.
@@ -2134,10 +2528,21 @@ js_marker_tip_offset_source <- function(arc_class) {
 #'
 #' @return List containing marker-tip x and y coordinates.
 #' @noRd
-js_arc_marker_point <- function(arc, points) {
+js_arc_marker_point <- function(
+  arc,
+  points,
+  glyph_lookup = NULL,
+  port_parent_lookup = list()
+) {
   end_index <- nrow(points)
   other_index <- if (end_index > 2) end_index - 1 else 1
   end_point <- list(x = points$x[end_index], y = points$y[end_index])
+  if (!is.null(glyph_lookup)) {
+    target_id <- js_endpoint_glyph_id(arc$target, port_parent_lookup)
+    if (is.null(target_id) || !(target_id %in% names(glyph_lookup))) {
+      return(end_point)
+    }
+  }
   offset <- js_marker_tip_offset_source(arc$class)
   dx <- end_point$x - points$x[other_index]
   dy <- end_point$y - points$y[other_index]
@@ -2277,6 +2682,81 @@ draw_js_tee <- function(x_end, y_end, x_prev, y_prev, length) {
   )
 }
 
+#' Return absolute-inhibition offsets for equal target and inter-bar gaps.
+#'
+#' @param marker_size Marker size.
+#'
+#' @return Named numeric vector with front and rear offsets.
+#' @noRd
+absolute_inhibition_bar_offsets <- function(marker_size) {
+  gap <- marker_size * 0.12
+  c(front = gap, rear = gap * 2)
+}
+
+#' Move an endpoint back toward the previous point.
+#'
+#' @param end Endpoint list with x and y.
+#' @param previous Previous point list with x and y.
+#' @param distance Distance to move.
+#'
+#' @return Shifted point or NULL for a zero-length direction.
+#' @noRd
+point_before_endpoint <- function(end, previous, distance) {
+  dx <- end$x - previous$x
+  dy <- end$y - previous$y
+  segment_length <- sqrt(dx^2 + dy^2)
+  if (segment_length <= 1e-6) {
+    return(NULL)
+  }
+  list(
+    x = end$x - dx / segment_length * distance,
+    y = end$y - dy / segment_length * distance
+  )
+}
+
+#' Return the connector joining absolute-inhibition tee centers.
+#'
+#' @param end Target endpoint.
+#' @param previous Previous arc point.
+#' @param marker_size Marker size.
+#'
+#' @return List with from and to points, or NULL for a zero-length direction.
+#' @noRd
+absolute_inhibition_connector <- function(end, previous, marker_size) {
+  offsets <- absolute_inhibition_bar_offsets(marker_size)
+  from <- point_before_endpoint(end, previous, offsets[["front"]])
+  to <- point_before_endpoint(end, previous, offsets[["rear"]])
+  if (is.null(from) || is.null(to)) {
+    return(NULL)
+  }
+  list(from = from, to = to)
+}
+
+#' Stop an absolute-inhibition stem at the rear tee bar.
+#'
+#' @param points Arc point data frame.
+#' @param marker_size Marker size in the same coordinate space as points.
+#'
+#' @return Arc points with a shortened terminal point.
+#' @noRd
+shorten_absolute_inhibition_line <- function(points, marker_size) {
+  if (is.null(points) || nrow(points) < 2) {
+    return(points)
+  }
+  end_index <- nrow(points)
+  offsets <- absolute_inhibition_bar_offsets(marker_size)
+  shortened <- point_before_endpoint(
+    list(x = points$x[end_index], y = points$y[end_index]),
+    list(x = points$x[end_index - 1], y = points$y[end_index - 1]),
+    offsets[["rear"]]
+  )
+  if (!is.null(shortened)) {
+    points$x[end_index] <- shortened$x
+    points$y[end_index] <- shortened$y
+  }
+  points
+}
+
 #' Draw an arc line using the JavaScript renderer's basic edge mapping.
 #'
 #' @param arc Arc record.
@@ -2296,6 +2776,12 @@ draw_js_arc <- function(arc, glyph_lookup = list(), port_parent_lookup = list())
     glyph_lookup,
     port_parent_lookup
   )
+
+  if (js_arc_marker(arc$class) == "double-tee") {
+    marker_size <- ARROW_SIZE * CYTOSCAPE_ARROW_SCALE /
+      max(renderer_state$render_scale, 1e-6)
+    points <- shorten_absolute_inhibition_line(points, marker_size)
+  }
 
   lines(
     points$x,
@@ -2324,49 +2810,24 @@ draw_js_arc_marker <- function(
     return(invisible(NULL))
   }
 
-  marker_size <- ARROW_SIZE * CYTOSCAPE_ARROW_SCALE
+  marker_size <- ARROW_SIZE * CYTOSCAPE_ARROW_SCALE /
+    max(renderer_state$render_scale, 1e-6)
   end_index <- nrow(points)
-  if (arc$class == "interaction") {
-    triangle <- data.frame(x = c(-0.15, 0, 0.15), y = c(-0.3, 0, -0.3))
-    source_id <- points$glyph_id[1]
-    target_id <- points$glyph_id[end_index]
-    source_glyph <- if (!is.na(source_id)) glyph_lookup[[source_id]] else NULL
-    target_glyph <- if (!is.na(target_id)) glyph_lookup[[target_id]] else NULL
-    if (!is.null(source_glyph) && source_glyph$class == "entity") {
-      draw_js_marker_polygon(
-        points$x[1],
-        points$y[1],
-        points$x[2],
-        points$y[2],
-        marker_size,
-        triangle,
-        fill = style_edge_color(),
-        border = NA,
-        lwd = 1
-      )
-    }
-    if (!is.null(target_glyph) && target_glyph$class == "entity") {
-      draw_js_marker_polygon(
-        points$x[end_index],
-        points$y[end_index],
-        points$x[end_index - 1],
-        points$y[end_index - 1],
-        marker_size,
-        triangle,
-        fill = style_edge_color(),
-        border = NA,
-        lwd = 1
-      )
-    }
-    return(invisible(NULL))
-  }
-
-  marker <- js_arc_marker(arc$class)
+  marker <- js_arc_marker_for_endpoints(
+    arc,
+    glyph_lookup,
+    port_parent_lookup
+  )
   if (marker == "none") {
     return(invisible(NULL))
   }
   raw_end <- list(x = points$x[end_index], y = points$y[end_index])
-  marker_point <- js_arc_marker_point(arc, points)
+  marker_point <- js_arc_marker_point(
+    arc,
+    points,
+    glyph_lookup,
+    port_parent_lookup
+  )
   marker_moved <- sqrt(
     (marker_point$x - raw_end$x)^2 +
       (marker_point$y - raw_end$y)^2
@@ -2374,9 +2835,24 @@ draw_js_arc_marker <- function(
   previous_point <- if (marker_moved) {
     raw_end
   } else {
-    list(x = points$x[1], y = points$y[1])
+    list(x = points$x[end_index - 1], y = points$y[end_index - 1])
   }
-  if (marker == "triangle") {
+  if (marker == "barbed-arrow") {
+    draw_js_marker_polygon(
+      marker_point$x,
+      marker_point$y,
+      previous_point$x,
+      previous_point$y,
+      marker_size,
+      data.frame(
+        x = c(0, -0.15, 0, 0.15),
+        y = c(0, -0.3, -0.21, -0.3)
+      ),
+      fill = style_edge_color(),
+      border = style_edge_color(),
+      lwd = 1
+    )
+  } else if (marker == "triangle") {
     if (arc$class == "production") {
       draw_js_marker_polygon(
         marker_point$x,
@@ -2397,7 +2873,7 @@ draw_js_arc_marker <- function(
         previous_point$y,
         marker_size,
         data.frame(x = c(-0.15, 0, 0.15), y = c(-0.3, 0, -0.3)),
-        fill = JS_NODE_FILL_COLOR,
+        fill = renderer_state$background_color,
         border = style_edge_color(),
         lwd = 1
       )
@@ -2410,6 +2886,42 @@ draw_js_arc_marker <- function(
       previous_point$y,
       marker_size * 0.3
     )
+  } else if (marker == "double-tee") {
+    offsets <- absolute_inhibition_bar_offsets(marker_size)
+    front <- point_before_endpoint(
+      marker_point,
+      previous_point,
+      offsets[["front"]]
+    )
+    rear <- point_before_endpoint(
+      marker_point,
+      previous_point,
+      offsets[["rear"]]
+    )
+    if (!is.null(front) && !is.null(rear)) {
+      draw_js_tee(
+        front$x,
+        front$y,
+        previous_point$x,
+        previous_point$y,
+        marker_size * 0.3
+      )
+      draw_js_tee(
+        rear$x,
+        rear$y,
+        previous_point$x,
+        previous_point$y,
+        marker_size * 0.3
+      )
+      segments(
+        front$x,
+        front$y,
+        rear$x,
+        rear$y,
+        col = style_edge_color(),
+        lwd = JS_DEFAULT_EDGE_WIDTH
+      )
+    }
   } else if (marker == "circle") {
     symbols(
       marker_point$x,
@@ -2418,7 +2930,7 @@ draw_js_arc_marker <- function(
       inches = FALSE,
       add = TRUE,
       fg = style_edge_color(),
-      bg = JS_NODE_FILL_COLOR,
+      bg = renderer_state$background_color,
       lwd = 1
     )
   } else if (marker == "diamond") {
@@ -2429,7 +2941,7 @@ draw_js_arc_marker <- function(
       previous_point$y,
       marker_size,
       data.frame(x = c(-0.15, 0, 0.15, 0), y = c(-0.15, -0.3, -0.15, 0)),
-      fill = JS_NODE_FILL_COLOR,
+      fill = renderer_state$background_color,
       border = style_edge_color(),
       lwd = 1
     )
@@ -2441,7 +2953,7 @@ draw_js_arc_marker <- function(
       previous_point$y,
       marker_size,
       data.frame(x = c(-0.15, 0, 0.15), y = c(-0.3, 0, -0.3)),
-      fill = JS_NODE_FILL_COLOR,
+      fill = renderer_state$background_color,
       border = style_edge_color(),
       lwd = 1
     )
@@ -2455,7 +2967,7 @@ draw_js_arc_marker <- function(
         x = c(-0.15, -0.15, 0.15, 0.15),
         y = c(-0.4, -0.4344827586206897, -0.4344827586206897, -0.4)
       ),
-      fill = JS_NODE_FILL_COLOR,
+      fill = renderer_state$background_color,
       border = style_edge_color(),
       lwd = 1
     )
@@ -2574,6 +3086,9 @@ sbgnml_basic_render_manifest <- function(
   emitted_label_ids <- character(0)
 
   add_element <- function(element) {
+    if (is.null(element$font_px)) {
+      element$font_px <- NA_real_
+    }
     elements[[length(elements) + 1]] <<- element
   }
 
@@ -2613,12 +3128,13 @@ sbgnml_basic_render_manifest <- function(
       y2 = NA_real_,
       cx = rect$center$x,
       cy = label_y,
-      width = max(1, rect$width - JS_TEXT_PADDING_PX),
-      height = max(1, rect$height - JS_TEXT_PADDING_PX),
+      width = estimate_label_width(label, style$font_px),
+      height = max(1, style$font_px),
       text = label,
       marker = "",
       source = "",
-      target = ""
+      target = "",
+      font_px = style$font_px
     ))
     emitted_label_ids <<- c(emitted_label_ids, label_id)
     invisible(NULL)
@@ -2628,7 +3144,7 @@ sbgnml_basic_render_manifest <- function(
     if (is.null(glyph$bbox)) {
       next
     }
-    if (glyph$class %in% c("unit of information", "state variable")) {
+    if (is_auxiliary_glyph_class(glyph$class)) {
       if (is.null(glyph$parent_id)) {
         next
       }
@@ -2675,7 +3191,8 @@ sbgnml_basic_render_manifest <- function(
           text = label,
           marker = "",
           source = "",
-          target = ""
+          target = "",
+          font_px = 9
         ))
       }
       next
@@ -2732,12 +3249,13 @@ sbgnml_basic_render_manifest <- function(
         y2 = NA_real_,
         cx = rect$center$x,
         cy = label_y,
-        width = max(1, rect$width - JS_TEXT_PADDING_PX),
-        height = max(1, rect$height - JS_TEXT_PADDING_PX),
+        width = estimate_label_width(label, style$font_px),
+        height = max(1, style$font_px),
         text = label,
         marker = "",
         source = "",
-        target = ""
+        target = "",
+        font_px = style$font_px
       ))
       emitted_label_ids <- c(emitted_label_ids, paste0(glyph$id, "::label"))
     }
@@ -2748,7 +3266,11 @@ sbgnml_basic_render_manifest <- function(
     if (is.null(points) || nrow(points) < 2) {
       next
     }
-    marker <- js_arc_marker(arc$class)
+    marker <- js_arc_marker_for_endpoints(
+      arc,
+      reference_maps$glyphs,
+      reference_maps$port_parents
+    )
     end_index <- nrow(points)
     add_element(list(
       id = paste0(arc$id, "::line"),
@@ -2760,8 +3282,8 @@ sbgnml_basic_render_manifest <- function(
       y1 = points$y[1],
       x2 = points$x[end_index],
       y2 = points$y[end_index],
-      cx = mean(points$x),
-      cy = mean(points$y),
+      cx = (points$x[1] + points$x[end_index]) / 2,
+      cy = (points$y[1] + points$y[end_index]) / 2,
       width = NA_real_,
       height = NA_real_,
       text = "",
@@ -2771,7 +3293,12 @@ sbgnml_basic_render_manifest <- function(
     ))
 
     if (marker != "none") {
-      marker_point <- js_arc_marker_point(arc, points)
+      marker_point <- js_arc_marker_point(
+        arc,
+        points,
+        reference_maps$glyphs,
+        reference_maps$port_parents
+      )
       add_element(list(
         id = paste0(arc$id, "::marker"),
         owner_id = arc$id,
@@ -2844,15 +3371,37 @@ sbgnml_basic_render_manifest <- function(
     }
   }
 
+  extent_elements <- Filter(
+    function(element) {
+      element$kind %in% c("node_shape", "auxiliary_shape") &&
+        !is.na(element$x1) &&
+        !is.na(element$y1) &&
+        !is.na(element$x2) &&
+        !is.na(element$y2)
+    },
+    elements
+  )
+  if (length(extent_elements) > 0) {
+    min_x <- min(vapply(extent_elements, function(element) element$x1, numeric(1)))
+    min_y <- min(vapply(extent_elements, function(element) element$y1, numeric(1)))
+    max_x <- max(vapply(extent_elements, function(element) element$x2, numeric(1)))
+    max_y <- max(vapply(extent_elements, function(element) element$y2, numeric(1)))
+  } else {
+    min_x <- bounds$min_x
+    min_y <- bounds$min_y
+    max_x <- bounds$max_x
+    max_y <- bounds$max_y
+  }
+
   list(
     coordinate_space = "source",
     canvas = list(
-      min_x = bounds$min_x,
-      min_y = bounds$min_y,
-      max_x = bounds$max_x,
-      max_y = bounds$max_y,
-      width = bounds$max_x - bounds$min_x,
-      height = bounds$max_y - bounds$min_y
+      min_x = min_x,
+      min_y = min_y,
+      max_x = max_x,
+      max_y = max_y,
+      width = max_x - min_x,
+      height = max_y - min_y
     ),
     elements = elements
   )
@@ -2940,6 +3489,438 @@ transform_manifest_to_rendered_pixels <- function(
   manifest
 }
 
+#' Convert a point data frame to manifest point records.
+#'
+#' @param points Data frame with x and y columns.
+#'
+#' @return List of point lists.
+#' @noRd
+points_to_manifest <- function(points) {
+  lapply(seq_len(nrow(points)), function(index) {
+    list(x = points$x[index], y = points$y[index])
+  })
+}
+
+#' Return a manifest bounding box for point coordinates.
+#'
+#' @param points Data frame with x and y columns.
+#'
+#' @return Named bounding-box list.
+#' @noRd
+points_manifest_bbox <- function(points) {
+  x1 <- min(points$x)
+  y1 <- min(points$y)
+  x2 <- max(points$x)
+  y2 <- max(points$y)
+  list(
+    x1 = x1,
+    y1 = y1,
+    x2 = x2,
+    y2 = y2,
+    width = x2 - x1,
+    height = y2 - y1,
+    cx = (x1 + x2) / 2,
+    cy = (y1 + y2) / 2
+  )
+}
+
+#' Build Go-compatible rendered marker details for a manifest element.
+#'
+#' @param element Edge marker manifest element.
+#' @param line Matching edge line manifest element.
+#'
+#' @return Rendered detail list or NULL.
+#' @noRd
+marker_rendered_detail <- function(element, line) {
+  marker <- element$marker
+  required <- c(element$cx, element$cy, line$x1, line$y1)
+  if (
+    is.null(marker) ||
+      marker %in% c("", "none") ||
+      any(vapply(required, is.null, logical(1))) ||
+      any(is.na(unlist(required)))
+  ) {
+    return(NULL)
+  }
+  end <- list(x = element$cx, y = element$cy)
+  start <- list(x = line$x1, y = line$y1)
+  edge_color <- tolower(style_edge_color())
+  marker_size <- ARROW_SIZE * CYTOSCAPE_ARROW_SCALE
+  primitives <- list()
+
+  add_polygon <- function(shape, purpose, local_points, fill, stroke, stroke_width) {
+    points <- marker_polygon_points(
+      end$x,
+      end$y,
+      start$x,
+      start$y,
+      marker_size,
+      local_points
+    )
+    if (is.null(points)) {
+      return(invisible(NULL))
+    }
+    primitive <- list(
+      kind = "path",
+      shape = shape,
+      purpose = purpose,
+      rendered_points = points_to_manifest(points),
+      bbox = points_manifest_bbox(points),
+      fill = fill,
+      stroke = stroke,
+      stroke_width = stroke_width
+    )
+    primitives[[length(primitives) + 1]] <<- primitive
+    invisible(NULL)
+  }
+
+  if (marker == "triangle") {
+    filled <- identical(element$class, "production")
+    add_polygon(
+      "triangle",
+      "target_arrow_triangle",
+      data.frame(x = c(-0.15, 0, 0.15), y = c(-0.3, 0, -0.3)),
+      if (filled) edge_color else "none",
+      if (filled) NULL else edge_color,
+      if (filled) NULL else 1
+    )
+  } else if (marker == "barbed-arrow") {
+    add_polygon(
+      "barbed-arrow",
+      "target_assignment_arrow",
+      data.frame(x = c(0, -0.15, 0, 0.15), y = c(0, -0.3, -0.21, -0.3)),
+      edge_color,
+      edge_color,
+      1
+    )
+  } else if (marker == "diamond") {
+    add_polygon(
+      "diamond",
+      "target_arrow_diamond",
+      data.frame(x = c(-0.15, 0, 0.15, 0), y = c(-0.15, -0.3, -0.15, 0)),
+      "none",
+      edge_color,
+      1
+    )
+  } else if (marker == "tee") {
+    add_polygon(
+      "tee",
+      "target_arrow_tee_bar",
+      data.frame(x = c(-0.15, -0.15, 0.15, 0.15), y = c(0, -0.1, -0.1, 0)),
+      edge_color,
+      NULL,
+      NULL
+    )
+  } else if (marker == "double-tee") {
+    add_polygon(
+      "double-tee-front",
+      "target_arrow_front_bar",
+      data.frame(x = c(-0.15, -0.15, 0.15, 0.15), y = c(0, -0.1, -0.1, 0)),
+      edge_color,
+      NULL,
+      NULL
+    )
+    add_polygon(
+      "double-tee-rear",
+      "target_arrow_rear_bar",
+      data.frame(
+        x = c(-0.15, -0.15, 0.15, 0.15),
+        y = c(-0.12, -0.22, -0.22, -0.12)
+      ),
+      edge_color,
+      NULL,
+      NULL
+    )
+  } else if (marker == "triangle-cross") {
+    add_polygon(
+      "triangle-cross-triangle",
+      "target_arrow_triangle_part",
+      data.frame(x = c(-0.15, 0, 0.15, -0.15), y = c(-0.3, 0, -0.3, -0.3)),
+      "none",
+      edge_color,
+      1
+    )
+    add_polygon(
+      "triangle-cross-bar",
+      "target_arrow_cross_bar_part",
+      data.frame(
+        x = c(-0.15, -0.15, 0.15, 0.15),
+        y = c(-0.4, -0.4344827586206897, -0.4344827586206897, -0.4)
+      ),
+      "none",
+      edge_color,
+      1
+    )
+  } else if (marker == "circle") {
+    radius <- 0.15 * marker_size
+    primitives[[1]] <- list(
+      kind = "path",
+      shape = "circle",
+      source_rule = "Cytoscape circle arrow shape radius=0.15*arrow_size",
+      bbox = list(
+        x1 = end$x - radius,
+        y1 = end$y - radius,
+        x2 = end$x + radius,
+        y2 = end$y + radius,
+        width = 2 * radius,
+        height = 2 * radius,
+        cx = end$x,
+        cy = end$y
+      ),
+      fill = "none",
+      stroke = edge_color,
+      stroke_width = 1
+    )
+  }
+  if (length(primitives) == 0) {
+    return(NULL)
+  }
+  fill_mode <- if (
+    marker == "barbed-arrow" ||
+      (marker == "triangle" && identical(element$class, "production")) ||
+      marker == "tee"
+  ) {
+    "filled"
+  } else {
+    "hollow"
+  }
+  list(
+    renderer = "render_sbgn_r",
+    coordinate_space = "rendered_pixel",
+    source_rule = paste(
+      "sbgnviz maps",
+      element$class,
+      "to Cytoscape target-arrow-shape",
+      marker
+    ),
+    style = list(
+      stroke = edge_color,
+      stroke_width = JS_DEFAULT_EDGE_WIDTH,
+      arrow_size = marker_size,
+      fill_mode = fill_mode,
+      target_arrow_fill = fill_mode
+    ),
+    drawn_primitives = primitives
+  )
+}
+
+#' Normalize an R graphics color to lowercase hexadecimal form.
+#'
+#' @param color R-compatible color string.
+#' @param include_alpha Whether to include the alpha channel.
+#'
+#' @return Lowercase hexadecimal color.
+#' @noRd
+manifest_color_hex <- function(color, include_alpha = FALSE) {
+  channels <- grDevices::col2rgb(color, alpha = TRUE)[, 1]
+  count <- if (include_alpha) 4 else 3
+  paste0(
+    "#",
+    paste0(sprintf("%02x", channels[seq_len(count)]), collapse = "")
+  )
+}
+
+#' Build a rectangle from a manifest element.
+#'
+#' @param element Manifest element.
+#'
+#' @return Pixel/source rectangle or NULL.
+#' @noRd
+manifest_element_rect <- function(element) {
+  coordinates <- c(element$x1, element$y1, element$x2, element$y2)
+  if (length(coordinates) != 4 || any(is.na(coordinates))) {
+    return(NULL)
+  }
+  x0 <- min(element$x1, element$x2)
+  y0 <- min(element$y1, element$y2)
+  width <- abs(element$x2 - element$x1)
+  height <- abs(element$y2 - element$y1)
+  list(
+    x0 = x0,
+    y0 = y0,
+    width = width,
+    height = height,
+    center = list(x = x0 + width / 2, y = y0 + height / 2)
+  )
+}
+
+#' Build Go-compatible rendered detail for a sensitive node class.
+#'
+#' @param element Node manifest element.
+#' @param glyph Parsed glyph record.
+#' @param glyph_colors Named glyph color mapping.
+#' @param glyph_color_type Whether color keys match labels or ids.
+#' @param auto_contrast_text Whether to contrast text against custom fills.
+#'
+#' @return Rendered detail list or NULL.
+#' @noRd
+node_rendered_detail <- function(
+  element,
+  glyph,
+  glyph_colors = NULL,
+  glyph_color_type = "label",
+  auto_contrast_text = TRUE
+) {
+  class_name <- glyph$class
+  if (grepl("complex", class_name, fixed = TRUE)) {
+    source_rule <- "sbgnviz complex generateComplexShapePoints cornerLength=24"
+    shape_name <- "complex"
+  } else if (grepl("simple chemical", class_name, fixed = TRUE)) {
+    source_rule <- "sbgnviz simple chemical drawSimpleChemicalPath"
+    shape_name <- "stadium_round_rectangle"
+  } else if (class_name == "compartment") {
+    source_rule <- "sbgnviz compartment uses Cytoscape barrel node shape"
+    shape_name <- "barrel"
+  } else if (class_name == "tag") {
+    source_rule <- "sbgnviz tag shape-polygon-points"
+    shape_name <- "polygon"
+  } else if (class_name == "perturbing agent") {
+    source_rule <- "sbgnviz perturbing agent shape-polygon-points"
+    shape_name <- "polygon"
+  } else {
+    return(NULL)
+  }
+  rect <- manifest_element_rect(element)
+  if (is.null(rect)) {
+    return(NULL)
+  }
+  style <- js_glyph_style(
+    glyph,
+    glyph_colors,
+    glyph_color_type,
+    auto_contrast_text
+  )
+  style_detail <- list(
+    fill = manifest_color_hex(style$fill, include_alpha = TRUE),
+    stroke = manifest_color_hex(style$border),
+    stroke_width = style$border_width
+  )
+  primitive <- function(shape, rule, primitive_rect, points = NULL) {
+    result <- c(
+      list(
+        kind = "path",
+        shape = shape,
+        source_rule = rule,
+        bbox = list(
+          x1 = primitive_rect$x0,
+          y1 = primitive_rect$y0,
+          x2 = primitive_rect$x0 + primitive_rect$width,
+          y2 = primitive_rect$y0 + primitive_rect$height,
+          width = primitive_rect$width,
+          height = primitive_rect$height,
+          cx = primitive_rect$center$x,
+          cy = primitive_rect$center$y
+        )
+      ),
+      style_detail
+    )
+    if (!is.null(points)) {
+      result$rendered_points <- points_to_manifest(points)
+    }
+    result
+  }
+
+  points <- if (grepl("complex", class_name, fixed = TRUE)) {
+    complex_points(rect)
+  } else if (class_name == "tag") {
+    tag_points(rect, glyph$orientation)
+  } else if (class_name == "perturbing agent") {
+    perturbing_agent_points(rect)
+  } else {
+    NULL
+  }
+  primitives <- list()
+  if (endsWith(class_name, " multimer")) {
+    shadow_rect <- rect
+    shadow_rect$x0 <- shadow_rect$x0 + 5
+    shadow_rect$y0 <- shadow_rect$y0 + 5
+    shadow_rect$center <- list(
+      x = shadow_rect$center$x + 5,
+      y = shadow_rect$center$y + 5
+    )
+    shadow_shape <- if (style$shape == "simple chemical") {
+      "multimer_shadow_stadium"
+    } else {
+      paste0("multimer_shadow_", gsub(" ", "_", style$shape, fixed = TRUE))
+    }
+    primitives[[length(primitives) + 1]] <- primitive(
+      shadow_shape,
+      "sbgnviz multimer pre-draw offset by 5 px",
+      shadow_rect
+    )
+  }
+  primitives[[length(primitives) + 1]] <- primitive(
+    shape_name,
+    source_rule,
+    rect,
+    points
+  )
+  list(
+    renderer = "render_sbgn_r",
+    coordinate_space = "rendered_pixel",
+    style = style_detail,
+    drawn_primitives = primitives
+  )
+}
+
+#' Add strict rendered details to selected manifest primitives.
+#'
+#' @param manifest Render manifest.
+#' @param glyphs Parsed glyph records.
+#' @param glyph_colors Named glyph color mapping.
+#' @param glyph_color_type Whether color keys match labels or ids.
+#' @param auto_contrast_text Whether to contrast text against custom fills.
+#'
+#' @return Updated manifest.
+#' @noRd
+add_manifest_rendered_details <- function(
+  manifest,
+  glyphs = list(),
+  glyph_colors = NULL,
+  glyph_color_type = "label",
+  auto_contrast_text = TRUE
+) {
+  glyph_lookup <- list()
+  for (glyph in glyphs) {
+    if (is.null(glyph_lookup[[glyph$id]])) {
+      glyph_lookup[[glyph$id]] <- glyph
+    }
+  }
+  line_lookup <- list()
+  for (element in manifest$elements) {
+    if (identical(element$kind, "edge_line")) {
+      line_lookup[[element$owner_id]] <- element
+    }
+  }
+  manifest$elements <- lapply(manifest$elements, function(element) {
+    if (identical(element$kind, "node_shape")) {
+      glyph <- glyph_lookup[[element$owner_id]]
+      if (!is.null(glyph)) {
+        detail <- node_rendered_detail(
+          element,
+          glyph,
+          glyph_colors,
+          glyph_color_type,
+          auto_contrast_text
+        )
+        if (!is.null(detail)) {
+          element$rendered_detail <- detail
+        }
+      }
+    } else if (identical(element$kind, "edge_marker")) {
+      line <- line_lookup[[element$owner_id]]
+      if (!is.null(line)) {
+        detail <- marker_rendered_detail(element, line)
+        if (!is.null(detail)) {
+          element$rendered_detail <- detail
+        }
+      }
+    }
+    element
+  })
+  manifest
+}
+
 #' Return native calibration for sbgnviz all-symbol oracle diagrams.
 #'
 #' @param diagram_id Source SBGN basename.
@@ -2996,15 +3977,18 @@ render_parsed_sbgnml <- function(
   old_auto_contrast_text <- renderer_state$auto_contrast_text
   old_show_process_node_labels <- renderer_state$show_process_node_labels
   old_style_config <- renderer_state$style_config
+  old_background_color <- renderer_state$background_color
   renderer_state$render_scale <- compute_render_scale(bounds, padding)
   renderer_state$auto_contrast_text <- auto_contrast_text
   renderer_state$show_process_node_labels <- show_process_node_labels
   renderer_state$style_config <- style_config
+  renderer_state$background_color <- render_background_color(parsed, style_config)
   on.exit({
     renderer_state$render_scale <- old_render_scale
     renderer_state$auto_contrast_text <- old_auto_contrast_text
     renderer_state$show_process_node_labels <- old_show_process_node_labels
     renderer_state$style_config <- old_style_config
+    renderer_state$background_color <- old_background_color
   }, add = TRUE)
 
   par(mar = c(0, 0, 0, 0), xaxs = "i", yaxs = "i", family = FONT_FAMILY)
@@ -3113,6 +4097,8 @@ draw_sbgnml <- function(
   }
   output_paths <- render_output_paths(input_path, output_path, output_format)
 
+  background_color <- render_background_color(parsed, style_config)
+
   render_device <- function(device_fn) {
     device_fn()
     on.exit(dev.off(), add = TRUE)
@@ -3135,14 +4121,20 @@ draw_sbgnml <- function(
         width = ceiling(width),
         height = ceiling(height),
         units = "px",
-        res = 96
+        res = 96,
+        bg = background_color
       )
     })
   }
 
   if (!is.null(output_paths$svg)) {
     render_device(function() {
-      svg(filename = output_paths$svg, width = width / 96, height = height / 96)
+      svg(
+        filename = output_paths$svg,
+        width = width / 72,
+        height = height / 72,
+        bg = background_color
+      )
     })
   }
 }
@@ -3156,10 +4148,10 @@ draw_sbgnml <- function(
 #' @noRd
 parse_bool <- function(value, option_name = "boolean option") {
   normalized <- tolower(trimws(value))
-  if (normalized %in% c("true", "t", "1", "yes", "y")) {
+  if (normalized %in% c("true", "t", "1", "yes", "y", "on")) {
     return(TRUE)
   }
-  if (normalized %in% c("false", "f", "0", "no", "n")) {
+  if (normalized %in% c("false", "f", "0", "no", "n", "off")) {
     return(FALSE)
   }
   stop(sprintf("%s must be true or false", option_name))
@@ -3454,6 +4446,13 @@ write_render_test_manifest <- function(
       output_height
     )
   }
+  manifest <- add_manifest_rendered_details(
+    manifest,
+    parsed$glyphs,
+    glyph_colors,
+    glyph_color_type,
+    auto_contrast_text
+  )
   dir.create(dirname(output_path), recursive = TRUE, showWarnings = FALSE)
   writeLines(
     jsonlite::toJSON(manifest, auto_unbox = TRUE, pretty = TRUE, null = "null"),

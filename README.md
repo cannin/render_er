@@ -1,28 +1,60 @@
 # render_er
 
-A native Rust renderer for SBGN Entity Relationship (ER) Level 1 maps. It reads
-SBGN-ML and writes PNG or SVG without requiring a browser or a host graphics
-library. It also provides a source-faithful SVG-to-PNG path used to reproduce
-every figure in the ER Level 1 specification while retaining source colors.
+Render SBGN Entity Relationship (ER) Level 1 maps to PNG or SVG with four
+independent native implementations: [Python](python/), [Rust](rust/),
+[Go](go/), and [R](r/). The implementations share fixtures and parity tests so
+their observable rendering behavior stays aligned.
 
-The rendering engine is adapted from the MIT-licensed Rust implementation in
-[`cannin/render_sbgn`](https://github.com/cannin/render_sbgn). ER parsing and
-rendering support in this repository includes arc groups, nested entities,
-outcomes attached to statement arcs, arc ports, bend points, and every ER Level
-1 influence marker.
+The Rust implementation also provides a source-faithful SVG-to-PNG path used to
+reproduce every figure in the ER Level 1 specification while retaining source
+colors. The rendering engines are adapted from the MIT-licensed implementations
+in [`cannin/render_sbgn`](https://github.com/cannin/render_sbgn). ER parsing and
+rendering support includes arc groups, nested entities, outcomes attached to
+statement arcs, arc ports, bend points, and every ER Level 1 influence marker.
 
 ## Quick start
 
+### Go
+
+Render PNG and SVG directly from the repository root:
+
 ```bash
-cargo --manifest-path rust/Cargo.toml run --release -- draw_sbgnml \
-  --input-path examples/figure_1_1.sbgn \
-  --output-path output/figure_1_1.svg
+(cd go && go run . draw_sbgnml \
+  --input-path ../examples/figure_1_1.sbgn \
+  --output-path ../output/figure_1_1-go.png)
+
+(cd go && go run . draw_sbgnml \
+  --input-path ../examples/figure_1_1.sbgn \
+  --output-path ../output/figure_1_1-go.svg)
 ```
 
-Use `.png` as the output extension for raster output. When `--output-path` is
-omitted, both formats are written beside the input file. Run
-`cargo --manifest-path rust/Cargo.toml run -- --help` for all sizing and styling
-options.
+### Rust
+
+```bash
+cargo run --manifest-path rust/Cargo.toml --release -- draw_sbgnml \
+  --input-path examples/figure_1_1.sbgn \
+  --output-path output/figure_1_1-rust.svg
+```
+
+### Python
+
+```bash
+uv run --project python render_sbgn_py draw_sbgnml \
+  --input-path examples/figure_1_1.sbgn \
+  --output-path output/figure_1_1-python.png
+```
+
+### R
+
+```bash
+Rscript r/draw_sbgnml.R \
+  --input-path examples/figure_1_1.sbgn \
+  --output-path output/figure_1_1-r.png
+```
+
+An explicit `.png` or `.svg` output path selects that format. Without an output
+path, the renderers write both formats beside the input. Each implementation
+also accepts `--help` for all sizing, styling, and manifest options.
 
 ## Complete specification figure set
 
@@ -50,7 +82,7 @@ The complete figure mapping and validation notes are in
 Render one source SVG directly with Rust:
 
 ```bash
-cargo --manifest-path rust/Cargo.toml run --release -- draw_svg \
+cargo run --manifest-path rust/Cargo.toml --release -- draw_svg \
   --input-path figure.svg \
   --output-path figure.png \
   --scale 2
@@ -128,11 +160,44 @@ The selection criteria and exclusions are documented in
 
 ## Verification
 
+Run the coordinated version, native test, CLI-parity, and cross-language
+conformance checks:
+
+```bash
+./scripts/test-all.sh
+```
+
+Individual Rust checks remain available:
+
 ```bash
 cargo fmt --manifest-path rust/Cargo.toml -- --check
 cargo clippy --manifest-path rust/Cargo.toml --all-targets --all-features -- -D warnings
 cargo test --manifest-path rust/Cargo.toml
 ```
+
+## Releases
+
+Every implementation uses the same semantic version. Verify the version and
+complete test suite before tagging:
+
+```bash
+./scripts/check-versions.sh X.Y.Z
+./scripts/test-all.sh
+```
+
+A release requires annotated `vX.Y.Z` and `go/vX.Y.Z` tags on the same commit.
+Push both tags together; the `vX.Y.Z` tag starts the GitHub Actions release:
+
+```bash
+git tag -a vX.Y.Z -m "render_er X.Y.Z"
+git tag -a go/vX.Y.Z -m "render_er Go X.Y.Z"
+git push origin vX.Y.Z go/vX.Y.Z
+```
+
+The workflow publishes source archives, a Python wheel, a checked R source
+package, Go binaries for Linux, macOS, and Windows on amd64 and arm64, and Rust
+binaries for Linux amd64, macOS arm64, and Windows amd64. It also publishes a
+SHA-256 checksum manifest for every asset.
 
 To validate an example against the official LibSBGN schema:
 

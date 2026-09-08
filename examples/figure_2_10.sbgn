@@ -1,0 +1,39 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<sbgn xmlns="http://sbgn.org/libsbgn/0.3">
+  <map language="entity relationship" id="figure_2_10">
+    <glyph id="value_p" class="state variable">
+      <state value="P"/>
+      <bbox x="736" y="305" w="27" h="27"/>
+    </glyph>
+    <glyph id="delay" class="delay">
+      <bbox x="528" y="424" w="22" h="22"/>
+      <port id="delay_input" x="539" y="460"/>
+      <port id="delay_output" x="539" y="384"/>
+    </glyph>
+    <glyph id="camkii" class="entity">
+      <label text="CaMKII"/>
+      <bbox x="582" y="441" w="227" h="75"/>
+      <glyph id="t306" class="state variable">
+        <state variable="T306"/>
+        <bbox x="720" y="426" w="61" h="28"/>
+      </glyph>
+    </glyph>
+    <arc id="assignment" class="assignment" source="value_p" target="t306">
+      <port id="assignment_stimulation_target" x="750" y="384"/>
+      <start x="750" y="332"/>
+      <end x="750" y="426"/>
+    </arc>
+    <arc id="camkii_to_delay" class="logic arc" source="camkii" target="delay_input">
+      <start x="582" y="460"/>
+      <end x="539" y="460"/>
+    </arc>
+    <arc id="delayed_stimulation" class="stimulation" source="delay_output" target="assignment_stimulation_target">
+      <glyph id="cis_label" class="cardinality">
+        <label text="cis"/>
+        <bbox x="613" y="371" w="35" h="27"/>
+      </glyph>
+      <start x="539" y="384"/>
+      <end x="750" y="384"/>
+    </arc>
+  </map>
+</sbgn>

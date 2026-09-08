@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<sbgn xmlns="http://sbgn.org/libsbgn/0.3">
+  <map language="entity relationship" id="figure_2_22">
+    <glyph id="psd" class="state variable">
+      <state value="PSD"/>
+      <bbox x="303" y="433" w="46" h="28"/>
+    </glyph>
+    <glyph id="ltp" class="phenotype">
+      <label text="LTP"/>
+      <bbox x="162" y="470" w="86" h="54"/>
+    </glyph>
+    <glyph id="glur" class="entity">
+      <label text="GluR"/>
+      <bbox x="276" y="550" w="189" h="75"/>
+      <glyph id="glur_location" class="location">
+        <bbox x="312" y="536" w="28" h="28"/>
+      </glyph>
+    </glyph>
+    <arc id="location_assignment" class="assignment" source="psd" target="glur_location">
+      <glyph id="location_outcome" class="outcome">
+        <bbox x="321" y="492" w="10" h="10"/>
+      </glyph>
+      <start x="326" y="461"/>
+      <end x="326" y="536"/>
+    </arc>
+    <arc id="phenotype_stimulation" class="stimulation" source="location_outcome" target="ltp">
+      <start x="321" y="497"/>
+      <end x="248" y="497"/>
+    </arc>
+  </map>
+</sbgn>
