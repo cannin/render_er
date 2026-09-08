@@ -20,3 +20,12 @@ def test_root_readme_describes_all_four_native_implementations() -> None:
     for implementation in ("Python", "Rust", "Go", "R"):
         assert f"[{implementation}]" in README
     assert "./scripts/test-all.sh" in README
+
+
+def test_root_readme_embeds_figure_1_2_renderer_comparison() -> None:
+    """Show the four native renderers using the same Figure 1.2 input."""
+
+    comparison_path = ROOT / "docs" / "images" / "figure_1_2_renderers.png"
+    assert "[Figure 1.2 rendered by Python, Rust, Go, and R]" in README
+    assert "(docs/images/figure_1_2_renderers.png)" in README
+    assert comparison_path.read_bytes().startswith(b"\x89PNG\r\n\x1a\n")

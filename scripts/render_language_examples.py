@@ -5,7 +5,7 @@
 #   "pillow>=11.3.0",
 # ]
 # ///
-"""Render the ER all-glyphs example with every imported implementation."""
+"""Render shared ER examples with every imported implementation."""
 
 import shutil
 import subprocess
@@ -14,10 +14,16 @@ from pathlib import Path
 from PIL import Image, ImageDraw, ImageFont
 
 REPOSITORY_ROOT = Path(__file__).resolve().parents[1]
-INPUT_PATH = REPOSITORY_ROOT / "render_examples" / "er_all_glyphs.sbgn"
+INPUT_PATHS = (
+    REPOSITORY_ROOT / "render_examples" / "er_all_glyphs.sbgn",
+    REPOSITORY_ROOT / "examples" / "figure_1_2.sbgn",
+)
 OUTPUT_ROOT = REPOSITORY_ROOT / "output" / "languages"
 COMPARISON_PATH = (
     REPOSITORY_ROOT / "output" / "comparisons" / "er_all_glyphs_languages.png"
+)
+README_COMPARISON_PATH = (
+    REPOSITORY_ROOT / "docs" / "images" / "figure_1_2_renderers.png"
 )
 ORIGINAL_PATH = (
     REPOSITORY_ROOT / "output" / "all_figures" / "png" / "appendix_b_reference_card.png"
@@ -31,7 +37,7 @@ LABEL_HEIGHT = 52
 
 
 def run_renderer(language: str, command: list[str], working_directory: Path) -> None:
-    """Run one renderer for both supported output formats.
+    """Run one renderer for every shared input and output format.
 
     Args:
         language: Output subdirectory and filename label.
@@ -44,19 +50,20 @@ def run_renderer(language: str, command: list[str], working_directory: Path) -> 
 
     output_directory = OUTPUT_ROOT / language
     output_directory.mkdir(parents=True, exist_ok=True)
-    for output_format in OUTPUT_FORMATS:
-        output_path = output_directory / f"er_all_glyphs.{output_format}"
-        subprocess.run(
-            [
-                *command,
-                "-i",
-                str(INPUT_PATH),
-                "-o",
-                str(output_path),
-            ],
-            cwd=working_directory,
-            check=True,
-        )
+    for input_path in INPUT_PATHS:
+        for output_format in OUTPUT_FORMATS:
+            output_path = output_directory / f"{input_path.stem}.{output_format}"
+            subprocess.run(
+                [
+                    *command,
+                    "-i",
+                    str(input_path),
+                    "-o",
+                    str(output_path),
+                ],
+                cwd=working_directory,
+                check=True,
+            )
 
 
 def require_command(command: str) -> None:
@@ -152,6 +159,72 @@ def compose_comparison() -> None:
     canvas.save(COMPARISON_PATH, optimize=True)
 
 
+def compose_readme_comparison() -> None:
+    """Create the README's two-by-two Figure 1.2 renderer comparison.
+
+    Returns:
+        None.
+    """
+
+    panels = [
+        ("Python", OUTPUT_ROOT / "python" / "figure_1_2.png"),
+        ("Rust", OUTPUT_ROOT / "rust" / "figure_1_2.png"),
+        ("Go", OUTPUT_ROOT / "go" / "figure_1_2.png"),
+        ("R", OUTPUT_ROOT / "r" / "figure_1_2.png"),
+    ]
+    missing_paths = [str(path) for _, path in panels if not path.is_file()]
+    if missing_paths:
+        raise FileNotFoundError(
+            f"README comparison inputs are missing: {', '.join(missing_paths)}"
+        )
+
+    canvas_width = 1696
+    canvas_height = 1248
+    panel_width = 760
+    panel_height = 500
+    column_gap = 80
+    row_gap = 120
+    left_margin = (canvas_width - panel_width * 2 - column_gap) // 2
+    top_margin = 30
+    font = ImageFont.truetype(str(FONT_PATH), 32)
+    canvas = Image.new("RGB", (canvas_width, canvas_height), "white")
+    draw = ImageDraw.Draw(canvas)
+    positions = (
+        (left_margin, top_margin),
+        (left_margin + panel_width + column_gap, top_margin),
+        (left_margin, top_margin + panel_height + row_gap),
+        (
+            left_margin + panel_width + column_gap,
+            top_margin + panel_height + row_gap,
+        ),
+    )
+
+    for (label, image_path), (panel_x, panel_y) in zip(panels, positions):
+        with Image.open(image_path) as source_image:
+            rendered = source_image.convert("RGBA")
+            rendered.thumbnail(
+                (panel_width, panel_height),
+                Image.Resampling.LANCZOS,
+            )
+            flattened = Image.new("RGBA", rendered.size, "white")
+            flattened.alpha_composite(rendered)
+            image_x = panel_x + (panel_width - rendered.width) // 2
+            image_y = panel_y + (panel_height - rendered.height) // 2
+            canvas.paste(flattened.convert("RGB"), (image_x, image_y))
+
+        label_box = draw.textbbox((0, 0), label, font=font)
+        label_width = label_box[2] - label_box[0]
+        draw.text(
+            (panel_x + (panel_width - label_width) / 2, panel_y + panel_height + 18),
+            label,
+            fill="#24292f",
+            font=font,
+        )
+
+    README_COMPARISON_PATH.parent.mkdir(parents=True, exist_ok=True)
+    canvas.save(README_COMPARISON_PATH, optimize=True)
+
+
 def main() -> None:
     """Generate PNG and SVG ER renders in Rust, Go, R, and Python.
 
@@ -183,6 +256,7 @@ def main() -> None:
         REPOSITORY_ROOT / "python",
     )
     compose_comparison()
+    compose_readme_comparison()
 
 
 if __name__ == "__main__":

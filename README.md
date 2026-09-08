@@ -12,6 +12,13 @@ in [`cannin/render_sbgn`](https://github.com/cannin/render_sbgn). ER parsing and
 rendering support includes arc groups, nested entities, outcomes attached to
 statement arcs, arc ports, bend points, and every ER Level 1 influence marker.
 
+## Renderer comparison
+
+Each panel renders the same [`figure_1_2.sbgn`](examples/figure_1_2.sbgn) input
+with one of the four native implementations.
+
+![Figure 1.2 rendered by Python, Rust, Go, and R](docs/images/figure_1_2_renderers.png)
+
 ## Quick start
 
 ### Go
@@ -140,7 +147,8 @@ source; only `examples/rtk.sbgn` is supplied upstream as structured SBGN-ML.
 
 The Go, R, and Python renderer baselines imported from `render_sbgn` remain
 independent implementations alongside the native Rust renderer. Generate PNG
-and SVG versions of the ER all-glyphs fixture with all four languages:
+and SVG versions of Figure 1.2 and the ER all-glyphs fixture with all four
+languages, along with both comparison images:
 
 ```bash
 ./scripts/render_language_examples.py
