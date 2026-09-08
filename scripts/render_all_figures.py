@@ -180,8 +180,9 @@ def main() -> None:
     svg_dir.mkdir(parents=True, exist_ok=True)
     png_dir.mkdir(parents=True, exist_ok=True)
 
-    run(["cargo", "build", "--release"], project_dir)
-    renderer = project_dir / "target/release/render_er"
+    rust_dir = project_dir / "rust"
+    run(["cargo", "build", "--release"], rust_dir)
+    renderer = rust_dir / "target/release/render_er"
     rows: list[dict[str, str]] = []
     png_paths: list[Path] = []
 

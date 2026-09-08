@@ -164,3 +164,166 @@ func TestJSArcRenderPointsClipsNestedAuxiliaryEndpoint(t *testing.T) {
 		t.Fatalf("nested auxiliary endpoint = %#v", points[1])
 	}
 }
+
+// TestAssignmentUsesBarbedArrow verifies ER assignments use their distinctive
+// filled arrowhead with a recessed tail rather than a stimulation triangle.
+func TestAssignmentUsesBarbedArrow(t *testing.T) {
+	if marker := jsArcMarker("assignment"); marker != "barbed-arrow" {
+		t.Fatalf("assignment marker = %q, want barbed-arrow", marker)
+	}
+}
+
+// TestERInteractionHasNoTriangleMarker verifies pure ER interaction arcs do
+// not render the black triangle marker used by other SBGN languages.
+func TestERInteractionHasNoTriangleMarker(t *testing.T) {
+	arc := Arc{ID: "interaction", ClassName: "interaction", Source: "a", Target: "b"}
+	glyphs := map[string]*Glyph{
+		"a": {ID: "a", ClassName: "entity"},
+		"b": {ID: "b", ClassName: "entity"},
+	}
+	if marker := jsArcMarkerForEndpoints(arc, glyphs, map[string]string{}); marker != "none" {
+		t.Fatalf("ER interaction marker = %q, want none", marker)
+	}
+}
+
+// TestERInteractionHasNoLegacyTriangleMarkers verifies pure ER interactions
+// never receive the filled triangle markers used by other SBGN languages.
+func TestERInteractionHasNoLegacyTriangleMarkers(t *testing.T) {
+	arc := Arc{ID: "interaction", ClassName: "interaction", Source: "a", Target: "b"}
+	glyphs := map[string]*Glyph{
+		"a": {ID: "a", ClassName: "entity"},
+		"b": {ID: "b", ClassName: "entity"},
+	}
+	sourceMarker, targetMarker := jsArcEndpointMarkers(arc, glyphs, map[string]string{})
+	if sourceMarker != "none" || targetMarker != "none" {
+		t.Fatalf("interaction endpoint markers = %q, %q; want none, none", sourceMarker, targetMarker)
+	}
+}
+
+// TestAbsoluteInhibitionUsesDoubleTee verifies absolute inhibition is not
+// rendered with the default hollow stimulation triangle.
+func TestAbsoluteInhibitionUsesDoubleTee(t *testing.T) {
+	if marker := jsArcMarker("absolute inhibition"); marker != "double-tee" {
+		t.Fatalf("absolute inhibition marker = %q, want double-tee", marker)
+	}
+}
+
+// TestAbsoluteInhibitionOffsetsLeaveEqualGaps verifies the target-to-front-bar
+// gap equals the spacing between the two bars.
+func TestAbsoluteInhibitionOffsetsLeaveEqualGaps(t *testing.T) {
+	front, rear := absoluteInhibitionBarOffsets(10)
+	if math.Abs(front-1.2) > 1e-9 || math.Abs((rear-front)-front) > 1e-9 {
+		t.Fatalf("absolute inhibition offsets = (%g, %g), want equal 1.2 gaps", front, rear)
+	}
+}
+
+// TestAbsoluteInhibitionConnectorJoinsBarCenters verifies the short connector
+// is orthogonal to both tee bars and spans exactly between their centers.
+func TestAbsoluteInhibitionConnectorJoinsBarCenters(t *testing.T) {
+	from, to, ok := absoluteInhibitionConnector(Point{X: 30, Y: 40}, Point{X: 30, Y: 10}, 10)
+	if !ok {
+		t.Fatal("absoluteInhibitionConnector() rejected a nonzero direction")
+	}
+	if from != (Point{X: 30, Y: 38.8}) || to != (Point{X: 30, Y: 37.6}) {
+		t.Fatalf("connector = %#v -> %#v, want (30,38.8) -> (30,37.6)", from, to)
+	}
+}
+
+// TestComputeBoundsIncludesNestedStateVariables keeps detached-looking state
+// variables inside the fitted canvas when their SBGN parent is an entity.
+func TestComputeBoundsIncludesNestedStateVariables(t *testing.T) {
+	glyphs := []Glyph{
+		{ID: "entity", ClassName: "entity", BBox: &BBox{X: 0, Y: 100, W: 100, H: 50}},
+		{ID: "value", ParentID: "entity", ClassName: "state variable", BBox: &BBox{X: 20, Y: 0, W: 60, H: 20}},
+	}
+	bounds, err := computeBounds(glyphs, nil)
+	if err != nil {
+		t.Fatalf("computeBounds() error = %v", err)
+	}
+	if bounds.MinY != 0 {
+		t.Fatalf("bounds.MinY = %g, want 0", bounds.MinY)
+	}
+}
+
+// TestInfluenceMarkerTipStopsAtArcTarget verifies a marker targeting an arc
+// connection ends at the declared point instead of extending across that arc.
+func TestInfluenceMarkerTipStopsAtArcTarget(t *testing.T) {
+	arc := Arc{
+		ID: "stimulation", ClassName: "stimulation", Source: "outcome", Target: "arc_port",
+		Points: []Point{{X: 10, Y: 10}, {X: 30, Y: 10}, {X: 30, Y: 40}},
+	}
+	point, ok := jsArcMarkerPoint(arc, map[string]*Glyph{}, map[string]string{}, map[string][]PixelRect{})
+	if !ok {
+		t.Fatal("jsArcMarkerPoint() rejected an explicit arc target")
+	}
+	if point != (Point{X: 30, Y: 40}) {
+		t.Fatalf("marker point = %#v, want the declared arc contact point", point)
+	}
+}
+
+// TestSquareStandaloneStateVariableUsesCircle verifies compact state values
+// remain circular.
+func TestSquareStandaloneStateVariableUsesCircle(t *testing.T) {
+	glyph := &Glyph{ID: "value", ClassName: "state variable", StateValue: "T", BBox: &BBox{W: 20, H: 20}}
+	if shape := jsAuxiliaryShapeType(glyph); shape != "ellipse" {
+		t.Fatalf("square standalone state-variable shape = %q, want ellipse", shape)
+	}
+}
+
+// TestWideStandaloneStateVariableUsesStadium verifies non-circular state
+// variables such as PSD use a pill rather than an ellipse.
+func TestWideStandaloneStateVariableUsesStadium(t *testing.T) {
+	glyph := &Glyph{ID: "value", ClassName: "state variable", StateValue: "PSD", BBox: &BBox{W: 36, H: 20}}
+	if shape := jsAuxiliaryShapeType(glyph); shape != "stadium_round_rectangle" {
+		t.Fatalf("wide standalone state-variable shape = %q, want stadium_round_rectangle", shape)
+	}
+}
+
+// TestExistenceIsAuxiliaryEllipse verifies nested existence state variables use
+// their circular auxiliary-glyph rendering path.
+func TestExistenceIsAuxiliaryEllipse(t *testing.T) {
+	glyph := &Glyph{ID: "exists", ParentID: "entity", ClassName: "existence"}
+	if !isAuxiliaryGlyphClass(glyph.ClassName) {
+		t.Fatal("existence glyph is not classified as auxiliary")
+	}
+	if shape := jsAuxiliaryShapeType(glyph); shape != "ellipse" {
+		t.Fatalf("existence shape = %q, want ellipse", shape)
+	}
+}
+
+// TestLocationUsesDiameterAndOffsetChord verifies the restored location glyph
+// has a centered diagonal plus an opposite-slope chord offset by R/3.
+func TestLocationUsesDiameterAndOffsetChord(t *testing.T) {
+	rect := PixelRect{X0: 10, Y0: 20, Width: 20, Height: 20, Center: Point{X: 20, Y: 30}}
+	lines := locationCrossLines(rect)
+	if len(lines) != 2 {
+		t.Fatalf("location line count = %d, want 2", len(lines))
+	}
+	chordMidpoint := Point{X: (lines[1][0].X + lines[1][1].X) / 2, Y: (lines[1][0].Y + lines[1][1].Y) / 2}
+	if math.Abs(math.Hypot(chordMidpoint.X-rect.Center.X, chordMidpoint.Y-rect.Center.Y)-rect.Width/6) > 1e-9 {
+		t.Fatal("location chord is not offset by radius/3")
+	}
+	intersection := Point{X: chordMidpoint.X, Y: chordMidpoint.Y}
+	if math.Abs(lines[0][0].X-intersection.X) > 1e-9 || math.Abs(lines[0][0].Y-intersection.Y) > 1e-9 {
+		t.Fatalf("centered diagonal starts at %#v, want chord intersection %#v", lines[0][0], intersection)
+	}
+	dx := lines[0][1].X - lines[0][0].X
+	dy := lines[0][1].Y - lines[0][0].Y
+	cross := (rect.Center.X-lines[0][0].X)*dy - (rect.Center.Y-lines[0][0].Y)*dx
+	if math.Abs(cross) > 1e-9 {
+		t.Fatalf("truncated diagonal does not pass through center: cross product %g", cross)
+	}
+}
+
+// TestAssignmentToImplicitXORSuppressesMarker verifies converging assignment
+// branches do not place barbs at the invisible merge point.
+func TestAssignmentToImplicitXORSuppressesMarker(t *testing.T) {
+	arc := Arc{ID: "branch", ClassName: "assignment", Source: "value", Target: "merge"}
+	glyphs := map[string]*Glyph{
+		"value": {ID: "value", ClassName: "state variable"},
+		"merge": {ID: "merge", ClassName: "implicit xor"},
+	}
+	if marker := jsArcMarkerForEndpoints(arc, glyphs, map[string]string{}); marker != "none" {
+		t.Fatalf("assignment-to-implicit-xor marker = %q, want none", marker)
+	}
+}

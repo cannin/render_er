@@ -253,7 +253,7 @@ func handleMCP(req JSONRPCRequest) JSONRPCResponse {
 				"protocolVersion": "2024-11-05",
 				"serverInfo": map[string]any{
 					"name":    "render-sbgn-go-lambda-mcp",
-					"version": "1.0.0",
+					"version": "0.0.1",
 				},
 				"capabilities": map[string]any{
 					"tools": map[string]any{

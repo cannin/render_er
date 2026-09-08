@@ -37,7 +37,7 @@ const (
 	// SBGN coordinates are treated as CSS/SVG-like pixels. canvas itself uses
 	// millimeters/points for text APIs, so text sizes are converted separately.
 	defaultPaddingPx    = 50.0
-	rendererVersion     = "0.0.7"
+	rendererVersion     = "0.0.1"
 	fontFamilyName      = "Liberation Sans"
 	arrowSize           = 8.0
 	cytoscapeArrowScale = 4.53125
@@ -777,7 +777,7 @@ func buildRenderTestManifest(diagramID string, glyphs []Glyph, arcs []Arc, bound
 			continue
 		}
 		endIndex := len(points) - 1
-		marker := jsArcMarker(arc.ClassName)
+		marker := jsArcMarkerForEndpoints(arc, glyphByID, portParentByID)
 		addElement(ManifestElement{
 			ID: arc.ID + "::line", OwnerID: arc.ID, Kind: "edge_line", Type: "line", Class: arc.ClassName,
 			X1: floatPtr(points[0].X), Y1: floatPtr(points[0].Y), X2: floatPtr(points[endIndex].X), Y2: floatPtr(points[endIndex].Y),
@@ -1063,10 +1063,15 @@ func markerRenderedDetail(element *ManifestElement, line ManifestElement, styleC
 		} else {
 			addPolygon("triangle", "target_arrow_triangle", []Point{{X: -0.15, Y: -0.3}, {X: 0, Y: 0}, {X: 0.15, Y: -0.3}}, "none", colorHex(edgeColor), 1.0)
 		}
+	case "barbed-arrow":
+		addPolygon("barbed-arrow", "target_assignment_arrow", []Point{{X: 0, Y: 0}, {X: -0.15, Y: -0.3}, {X: 0, Y: -0.21}, {X: 0.15, Y: -0.3}}, colorHex(edgeColor), colorHex(edgeColor), 1.0)
 	case "diamond":
 		addPolygon("diamond", "target_arrow_diamond", []Point{{X: -0.15, Y: -0.15}, {X: 0, Y: -0.3}, {X: 0.15, Y: -0.15}, {X: 0, Y: 0}}, "none", colorHex(edgeColor), 1.0)
 	case "tee":
 		addPolygon("tee", "target_arrow_tee_bar", []Point{{X: -0.15, Y: 0}, {X: -0.15, Y: -0.1}, {X: 0.15, Y: -0.1}, {X: 0.15, Y: 0}}, colorHex(edgeColor), nil, nil)
+	case "double-tee":
+		addPolygon("double-tee-front", "target_arrow_front_bar", []Point{{X: -0.15, Y: 0}, {X: -0.15, Y: -0.1}, {X: 0.15, Y: -0.1}, {X: 0.15, Y: 0}}, colorHex(edgeColor), nil, nil)
+		addPolygon("double-tee-rear", "target_arrow_rear_bar", []Point{{X: -0.15, Y: -0.12}, {X: -0.15, Y: -0.22}, {X: 0.15, Y: -0.22}, {X: 0.15, Y: -0.12}}, colorHex(edgeColor), nil, nil)
 	case "triangle-cross":
 		addPolygon("triangle-cross-triangle", "target_arrow_triangle_part", []Point{{X: -0.15, Y: -0.3}, {X: 0, Y: 0}, {X: 0.15, Y: -0.3}, {X: -0.15, Y: -0.3}}, "none", colorHex(edgeColor), 1.0)
 		addPolygon("triangle-cross-bar", "target_arrow_cross_bar_part", []Point{{X: -0.15, Y: -0.4}, {X: -0.15, Y: -0.4344827586206897}, {X: 0.15, Y: -0.4344827586206897}, {X: 0.15, Y: -0.4}}, "none", colorHex(edgeColor), 1.0)
@@ -1079,7 +1084,7 @@ func markerRenderedDetail(element *ManifestElement, line ManifestElement, styleC
 		return nil
 	}
 	fillMode := "hollow"
-	if (marker == "triangle" && element.Class == "production") || marker == "tee" {
+	if marker == "barbed-arrow" || (marker == "triangle" && element.Class == "production") || marker == "tee" {
 		fillMode = "filled"
 	}
 	return map[string]interface{}{"renderer": "render_sbgn_go", "coordinate_space": "rendered_pixel", "source_rule": "sbgnviz maps " + element.Class + " to Cytoscape target-arrow-shape " + marker, "style": map[string]interface{}{"stroke": colorHex(edgeColor), "stroke_width": 1.25, "arrow_size": arrowSize * cytoscapeArrowScale, "fill_mode": fillMode, "target_arrow_fill": fillMode}, "drawn_primitives": primitives}
@@ -1282,11 +1287,11 @@ func sbgnvizPortSpan(glyph *Glyph) (float64, bool) {
 // isJSHiddenGlyphClass reports whether Cytoscape omits a glyph as a standalone node.
 // Parameters: className is the SBGN glyph class.
 func isJSHiddenGlyphClass(className string) bool {
-	return className == "unit of information" || className == "state variable" || className == "terminal"
+	return className == "unit of information" || className == "state variable" || className == "existence" || className == "location" || className == "implicit xor" || className == "terminal"
 }
 
 func isAuxiliaryGlyphClass(className string) bool {
-	return className == "unit of information" || className == "state variable"
+	return className == "unit of information" || className == "state variable" || className == "existence" || className == "location"
 }
 
 func jsAuxiliaryLabel(glyph *Glyph) string {
@@ -1310,8 +1315,17 @@ func jsAuxiliaryShapeType(glyph *Glyph) string {
 	if glyph == nil {
 		return "rectangle"
 	}
+	if glyph.ClassName == "state variable" && glyph.ParentID == "" {
+		if glyph.BBox != nil && math.Abs(glyph.BBox.W-glyph.BBox.H) > 1e-6 {
+			return "stadium_round_rectangle"
+		}
+		return "ellipse"
+	}
 	if glyph.ClassName == "state variable" {
 		return "stadium_round_rectangle"
+	}
+	if glyph.ClassName == "existence" || glyph.ClassName == "location" {
+		return "ellipse"
 	}
 	switch strings.ToLower(strings.TrimSpace(glyph.EntityName)) {
 	case "macromolecule":
@@ -1594,6 +1608,12 @@ func jsArcMarkerPoint(arc Arc, glyphByID map[string]*Glyph, portParentByID map[s
 	if len(points) > 2 {
 		other = points[endIndex-1]
 	}
+	// An unresolved explicit target is an arc attachment point rather than a
+	// node boundary. Keep the marker tip exactly on that point so its triangle
+	// touches the target arc without crossing it.
+	if targetGlyph == nil {
+		return points[endIndex], true
+	}
 	offset := jsMarkerTipOffsetSource(arc.ClassName)
 	if math.Abs(offset) > 0.0 {
 		dx := points[endIndex].X - other.X
@@ -1603,7 +1623,6 @@ func jsArcMarkerPoint(arc Arc, glyphByID map[string]*Glyph, portParentByID map[s
 			return Point{X: points[endIndex].X + dx/length*offset, Y: points[endIndex].Y + dy/length*offset}, true
 		}
 	}
-	_ = targetGlyph
 	return points[endIndex], true
 }
 
@@ -1871,8 +1890,12 @@ func jsArcMarker(className string) string {
 	switch className {
 	case "consumption", "interaction", "logic arc", "equivalence arc":
 		return "none"
+	case "assignment":
+		return "barbed-arrow"
 	case "inhibition", "negative influence":
 		return "tee"
+	case "absolute inhibition":
+		return "double-tee"
 	case "catalysis":
 		return "circle"
 	case "modulation", "unknown influence":
@@ -1882,6 +1905,30 @@ func jsArcMarker(className string) string {
 	default:
 		return "triangle"
 	}
+}
+
+// jsArcMarkerForEndpoints suppresses assignment markers at invisible merge
+// glyphs while preserving the normal class-to-marker mapping elsewhere.
+func jsArcMarkerForEndpoints(arc Arc, glyphByID map[string]*Glyph, portParentByID map[string]string) string {
+	marker := jsArcMarker(arc.ClassName)
+	targetID := jsEndpointGlyphID(arc.Target, portParentByID)
+	if marker == "barbed-arrow" {
+		if targetGlyph := glyphByID[targetID]; targetGlyph != nil && targetGlyph.ClassName == "implicit xor" {
+			return "none"
+		}
+	}
+	return marker
+}
+
+// jsArcEndpointMarkers returns the terminal markers for a pure ER arc.
+// Interaction arcs are unmarked; filled recessed-tail barbs belong to explicit
+// assignment arcs only.
+func jsArcEndpointMarkers(arc Arc, glyphByID map[string]*Glyph, portParentByID map[string]string) (string, string) {
+	marker := jsArcMarkerForEndpoints(arc, glyphByID, portParentByID)
+	if arc.ClassName == "interaction" {
+		return "none", "none"
+	}
+	return "none", marker
 }
 
 // floatPtr returns a pointer to value for JSON fields that may be null.
@@ -2582,7 +2629,7 @@ func computeBounds(glyphs []Glyph, arcs []Arc) (Bounds, error) {
 	var xValues []float64
 	var yValues []float64
 	for _, glyph := range glyphs {
-		if glyph.BBox != nil && !isJSHiddenGlyphClass(glyph.ClassName) {
+		if glyph.BBox != nil && (!isJSHiddenGlyphClass(glyph.ClassName) || isAuxiliaryGlyphClass(glyph.ClassName)) {
 			bbox := *glyph.BBox
 			xValues = append(xValues, bbox.X, bbox.X+bbox.W)
 			yValues = append(yValues, bbox.Y, bbox.Y+bbox.H)
@@ -2779,20 +2826,56 @@ func (r renderer) drawJSGlyph(transform *Transform, glyph *Glyph, compoundRects 
 // drawAuxiliaryGlyph renders nested unit/state boxes and reports whether it handled the glyph.
 // Parameters: transform maps source coordinates; glyph is a flattened child glyph.
 func (r renderer) drawAuxiliaryGlyph(transform *Transform, glyph *Glyph) bool {
-	if glyph == nil || glyph.BBox == nil || (glyph.ClassName != "unit of information" && glyph.ClassName != "state variable") {
+	if glyph == nil || glyph.BBox == nil || !isAuxiliaryGlyphClass(glyph.ClassName) {
 		return false
 	}
-	if glyph.ParentID == "" {
+	if glyph.ParentID == "" && glyph.ClassName != "state variable" {
 		return true
 	}
 	rect := bboxPixelRect(transform, *glyph.BBox)
+	if glyph.ClassName == "existence" || glyph.ClassName == "location" {
+		diameter := math.Min(rect.Width, rect.Height)
+		rect = PixelRect{X0: rect.Center.X - diameter/2.0, Y0: rect.Center.Y - diameter/2.0, Width: diameter, Height: diameter, Center: rect.Center}
+	}
 	path := jsAuxiliaryPath(rect, jsAuxiliaryShapeType(glyph))
 	r.drawPath(path, &jsNodeFillColor, &jsNodeBorderColor, 1.4)
+	if glyph.ClassName == "existence" {
+		rightHalf := rectPath(PixelRect{X0: rect.Center.X, Y0: rect.Y0, Width: rect.Width / 2.0, Height: rect.Height, Center: Point{X: rect.Center.X + rect.Width/4.0, Y: rect.Center.Y}})
+		filledHalf := path.And(rightHalf)
+		r.drawPath(filledHalf, &jsNodeBorderColor, nil, 0)
+		r.drawPath(path, nil, &jsNodeBorderColor, 1.4)
+	}
+	if glyph.ClassName == "location" {
+		for _, line := range locationCrossLines(rect) {
+			cross := &canvas.Path{}
+			cross.MoveTo(line[0].X, line[0].Y)
+			cross.LineTo(line[1].X, line[1].Y)
+			r.drawPath(cross, nil, &jsNodeBorderColor, 1.4)
+		}
+	}
 	label := jsAuxiliaryLabel(glyph)
 	if strings.TrimSpace(label) != "" {
 		r.drawTextCentered(rect.Center, label, math.Max(5.0, math.Min(8.0, rect.Height*0.75)), jsNodeTextColor)
 	}
 	return true
+}
+
+// locationCrossLines returns the centered diagonal and the opposite-slope
+// chord offset by one third of the radius in a circular location glyph.
+func locationCrossLines(rect PixelRect) [][2]Point {
+	radius := math.Min(rect.Width, rect.Height) / 2.0
+	diagonalRadius := radius * math.Sqrt(0.5)
+	chordOffset := radius / 3.0
+	chordMidpoint := Point{
+		X: rect.Center.X - chordOffset*math.Sqrt(0.5),
+		Y: rect.Center.Y - chordOffset*math.Sqrt(0.5),
+	}
+	chordHalfLength := math.Sqrt(radius*radius - chordOffset*chordOffset)
+	chordDelta := chordHalfLength * math.Sqrt(0.5)
+	return [][2]Point{
+		{{X: chordMidpoint.X, Y: chordMidpoint.Y}, {X: rect.Center.X + diagonalRadius, Y: rect.Center.Y + diagonalRadius}},
+		{{X: chordMidpoint.X - chordDelta, Y: chordMidpoint.Y + chordDelta}, {X: chordMidpoint.X + chordDelta, Y: chordMidpoint.Y - chordDelta}},
+	}
 }
 
 func jsAuxiliaryPath(rect PixelRect, shapeType string) *canvas.Path {
@@ -2985,6 +3068,18 @@ func (r renderer) drawJSArc(transform *Transform, arc Arc, glyphByID map[string]
 	if !ok {
 		return
 	}
+	if jsArcMarker(arc.ClassName) == "double-tee" && len(points) >= 2 {
+		endIndex := len(points) - 1
+		end := transform.mapPoint(points[endIndex].X, points[endIndex].Y)
+		previous := transform.mapPoint(points[endIndex-1].X, points[endIndex-1].Y)
+		_, rearOffset := absoluteInhibitionBarOffsets(arrowSize * cytoscapeArrowScale)
+		if shortened, ok := pointBeforeEndpoint(end, previous, rearOffset); ok {
+			points[endIndex] = Point{
+				X: transform.MinX + (shortened.X-transform.OffsetX)/transform.ScaleX,
+				Y: transform.MinY + (shortened.Y-transform.OffsetY)/transform.ScaleY,
+			}
+		}
+	}
 	path := &canvas.Path{}
 	start := transform.mapPoint(points[0].X, points[0].Y)
 	path.MoveTo(start.X, start.Y)
@@ -3010,27 +3105,13 @@ func (r renderer) drawJSArcAuxiliaryGlyphs(transform *Transform, arc Arc) {
 // drawJSArcMarker redraws markers above nodes so arrowheads are not covered by node fills.
 // Parameters: transform maps source coordinates; arc/glyph lookups resolve the rendered endpoint.
 func (r renderer) drawJSArcMarker(transform *Transform, arc Arc, glyphByID map[string]*Glyph, portParentByID map[string]string, auxiliaryRectsByParent map[string][]PixelRect, styleConfig *StyleConfig) {
-	points, sourceID, targetID, ok := jsArcRenderPoints(arc, glyphByID, portParentByID)
+	points, _, _, ok := jsArcRenderPoints(arc, glyphByID, portParentByID)
 	if !ok {
 		return
 	}
 	endIndex := len(points) - 1
 	edgeColor := styleConfig.edgeColor()
 	markerSize := arrowSize * cytoscapeArrowScale
-	if arc.ClassName == "interaction" {
-		triangle := []Point{{X: -0.15, Y: -0.3}, {X: 0, Y: 0}, {X: 0.15, Y: -0.3}}
-		if sourceGlyph := glyphByID[sourceID]; sourceGlyph != nil && sourceGlyph.ClassName == "entity" {
-			end := transform.mapPoint(points[0].X, points[0].Y)
-			previous := transform.mapPoint(points[1].X, points[1].Y)
-			r.drawMarkerPolygon(end, previous, markerSize, triangle, &edgeColor, nil, 0)
-		}
-		if targetGlyph := glyphByID[targetID]; targetGlyph != nil && targetGlyph.ClassName == "entity" {
-			end := transform.mapPoint(points[endIndex].X, points[endIndex].Y)
-			previous := transform.mapPoint(points[endIndex-1].X, points[endIndex-1].Y)
-			r.drawMarkerPolygon(end, previous, markerSize, triangle, &edgeColor, nil, 0)
-		}
-		return
-	}
 	markerPoint, markerOK := jsArcMarkerPoint(arc, glyphByID, portParentByID, auxiliaryRectsByParent)
 	if !markerOK {
 		markerPoint = points[endIndex]
@@ -3041,8 +3122,13 @@ func (r renderer) drawJSArcMarker(transform *Transform, arc Arc, glyphByID map[s
 	}
 	start := transform.mapPoint(prevPoint.X, prevPoint.Y)
 	end := transform.mapPoint(markerPoint.X, markerPoint.Y)
-	marker := jsArcMarker(arc.ClassName)
-	if marker == "triangle" {
+	marker := jsArcMarkerForEndpoints(arc, glyphByID, portParentByID)
+	if marker == "none" {
+		return
+	}
+	if marker == "barbed-arrow" {
+		r.drawMarkerPolygon(end, start, markerSize, []Point{{X: 0, Y: 0}, {X: -0.15, Y: -0.3}, {X: 0, Y: -0.21}, {X: 0.15, Y: -0.3}}, &edgeColor, &edgeColor, 1.0)
+	} else if marker == "triangle" {
 		if arc.ClassName == "production" {
 			r.drawMarkerPolygon(end, start, markerSize, []Point{{X: -0.15, Y: -0.3}, {X: 0, Y: 0}, {X: 0.15, Y: -0.3}}, &edgeColor, nil, 0)
 		} else {
@@ -3050,6 +3136,16 @@ func (r renderer) drawJSArcMarker(transform *Transform, arc Arc, glyphByID map[s
 		}
 	} else if marker == "tee" {
 		r.drawMarkerPolygon(end, start, markerSize, []Point{{X: -0.15, Y: 0}, {X: -0.15, Y: -0.1}, {X: 0.15, Y: -0.1}, {X: 0.15, Y: 0}}, &edgeColor, nil, 1.25)
+	} else if marker == "double-tee" {
+		frontOffset, rearOffset := absoluteInhibitionBarOffsets(markerSize)
+		r.drawInhibitionBar(end, start, markerSize*0.3, frontOffset, edgeColor, 1.25)
+		r.drawInhibitionBar(end, start, markerSize*0.3, rearOffset, edgeColor, 1.25)
+		if from, to, ok := absoluteInhibitionConnector(end, start, markerSize); ok {
+			connector := &canvas.Path{}
+			connector.MoveTo(from.X, from.Y)
+			connector.LineTo(to.X, to.Y)
+			r.drawPath(connector, nil, &edgeColor, 1.25)
+		}
 	} else if marker == "circle" {
 		radius := math.Max(markerSize*0.15, 1.0)
 		r.drawPath(circlePath(end, radius), &r.background, &edgeColor, 1.0)
@@ -3059,6 +3155,38 @@ func (r renderer) drawJSArcMarker(transform *Transform, arc Arc, glyphByID map[s
 		r.drawMarkerPolygon(end, start, markerSize, []Point{{X: -0.15, Y: -0.3}, {X: 0, Y: 0}, {X: 0.15, Y: -0.3}}, &r.background, &edgeColor, 1.0)
 		r.drawMarkerPolygon(end, start, markerSize, []Point{{X: -0.15, Y: -0.4}, {X: -0.15, Y: -0.4344827586206897}, {X: 0.15, Y: -0.4344827586206897}, {X: 0.15, Y: -0.4}}, &r.background, &edgeColor, 1.0)
 	}
+}
+
+// absoluteInhibitionBarOffsets places the first bar one inter-bar gap before
+// the target and the second bar the same distance behind the first.
+func absoluteInhibitionBarOffsets(markerSize float64) (float64, float64) {
+	gap := markerSize * 0.12
+	return gap, gap * 2.0
+}
+
+// absoluteInhibitionConnector returns the centered segment joining both bars.
+func absoluteInhibitionConnector(end Point, previous Point, markerSize float64) (Point, Point, bool) {
+	frontOffset, rearOffset := absoluteInhibitionBarOffsets(markerSize)
+	front, ok := pointBeforeEndpoint(end, previous, frontOffset)
+	if !ok {
+		return Point{}, Point{}, false
+	}
+	rear, ok := pointBeforeEndpoint(end, previous, rearOffset)
+	if !ok {
+		return Point{}, Point{}, false
+	}
+	return front, rear, true
+}
+
+// pointBeforeEndpoint moves from end back toward previous by distance.
+func pointBeforeEndpoint(end Point, previous Point, distance float64) (Point, bool) {
+	dx := end.X - previous.X
+	dy := end.Y - previous.Y
+	length := math.Hypot(dx, dy)
+	if length <= 1e-6 {
+		return Point{}, false
+	}
+	return Point{X: end.X - dx/length*distance, Y: end.Y - dy/length*distance}, true
 }
 
 // drawFilledTriangle draws a filled production arrow marker.

@@ -1,0 +1,53 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<sbgn xmlns="http://sbgn.org/libsbgn/0.3">
+  <map language="entity relationship" id="figure_2_04">
+    <glyph id="value_p" class="state variable">
+      <state value="P"/>
+      <bbox x="213" y="20" w="24" h="24"/>
+    </glyph>
+    <glyph id="camkii" class="entity">
+      <label text="CaMKII"/>
+      <bbox x="50" y="190" w="260" h="90"/>
+      <glyph id="t306" class="state variable">
+        <state variable="T306"/>
+        <bbox x="190" y="178" w="70" h="24"/>
+      </glyph>
+    </glyph>
+    <glyph id="cam" class="entity">
+      <label text="CaM"/>
+      <bbox x="520" y="350" w="180" h="90"/>
+    </glyph>
+    <arc id="assignment" class="assignment" source="value_p" target="t306">
+      <glyph id="assignment_outcome" class="outcome">
+        <bbox x="219" y="68" w="12" h="12"/>
+      </glyph>
+      <port id="assignment_inhibition_target" x="225" y="120"/>
+      <start x="225" y="44"/>
+      <end x="225" y="178"/>
+    </arc>
+    <arc id="interaction" class="assignment" source="camkii" target="cam">
+      <glyph id="interaction_outcome" class="outcome">
+        <bbox x="394" y="389" w="12" h="12"/>
+      </glyph>
+      <port id="interaction_inhibition_target" x="440" y="395"/>
+      <start x="260" y="280"/>
+      <next x="260" y="395"/>
+      <end x="520" y="395"/>
+    </arc>
+    <arc id="interaction_reverse" class="assignment" source="cam" target="camkii">
+      <start x="520" y="395"/>
+      <next x="260" y="395"/>
+      <end x="260" y="280"/>
+    </arc>
+    <arc id="inhibition" class="inhibition" source="assignment_outcome" target="interaction_inhibition_target">
+      <start x="231" y="74"/>
+      <next x="440" y="74"/>
+      <end x="440" y="395"/>
+    </arc>
+    <arc id="absolute_inhibition" class="absolute inhibition" source="interaction_outcome" target="assignment_inhibition_target">
+      <start x="400" y="389"/>
+      <next x="400" y="120"/>
+      <end x="225" y="120"/>
+    </arc>
+  </map>
+</sbgn>

@@ -1,0 +1,81 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<sbgn xmlns="http://sbgn.org/libsbgn/0.3">
+  <map language="entity relationship" id="figure_2_07">
+    <glyph id="cam" class="entity">
+      <label text="CaM"/>
+      <bbox x="896" y="430" w="108" h="60"/>
+      <glyph id="cam_type" class="unit of information">
+        <label text="mt:prot"/>
+        <bbox x="926" y="481.5" w="48" h="17"/>
+      </glyph>
+    </glyph>
+    <glyph id="value_p" class="state variable">
+      <state value="P"/>
+      <bbox x="625" y="130" w="20" h="20"/>
+    </glyph>
+    <glyph id="or_operator" class="or">
+      <bbox x="669" y="199" w="42" h="42"/>
+      <port id="or_left" x="648" y="220"/>
+      <port id="or_right" x="732" y="220"/>
+    </glyph>
+    <glyph id="camkii" class="entity">
+      <label text="CaMKII"/>
+      <bbox x="500" y="290" w="180" h="60"/>
+      <glyph id="t306" class="state variable">
+        <state variable="T306"/>
+        <bbox x="615.5" y="281.5" w="39" h="17"/>
+      </glyph>
+    </glyph>
+    <arc id="assignment_p" class="assignment" source="value_p" target="t306">
+      <port id="assignment_inhibition_target" x="635" y="220"/>
+      <start x="635" y="150"/>
+      <end x="635" y="281.5"/>
+    </arc>
+    <arc id="trans_assignment" class="assignment" source="camkii" target="camkii">
+      <glyph id="trans_outcome" class="outcome">
+        <bbox x="734" y="294" w="12" h="12"/>
+      </glyph>
+      <glyph id="trans_label" class="cardinality">
+        <label text="trans"/>
+        <bbox x="749" y="310" w="37.5" h="16.5"/>
+      </glyph>
+      <start x="680" y="300"/>
+      <next x="770" y="300"/>
+      <next x="770" y="340"/>
+      <end x="680" y="340"/>
+    </arc>
+    <arc id="trans_assignment_reverse" class="assignment" source="camkii" target="camkii">
+      <start x="680" y="340"/>
+      <next x="770" y="340"/>
+      <next x="770" y="300"/>
+      <end x="680" y="300"/>
+    </arc>
+    <arc id="cam_assignment" class="assignment" source="camkii" target="cam">
+      <glyph id="cam_outcome" class="outcome">
+        <bbox x="794" y="454" w="12" h="12"/>
+      </glyph>
+      <start x="662" y="350"/>
+      <next x="662" y="460"/>
+      <end x="896" y="460"/>
+    </arc>
+    <arc id="cam_assignment_reverse" class="assignment" source="cam" target="camkii">
+      <start x="896" y="460"/>
+      <next x="662" y="460"/>
+      <end x="662" y="350"/>
+    </arc>
+    <arc id="logic_trans" class="logic arc" source="trans_outcome" target="or_right">
+      <start x="740" y="294"/>
+      <next x="740" y="220"/>
+      <end x="732" y="220"/>
+    </arc>
+    <arc id="logic_cam" class="logic arc" source="cam_outcome" target="or_right">
+      <start x="800" y="454"/>
+      <next x="800" y="220"/>
+      <end x="732" y="220"/>
+    </arc>
+    <arc id="or_inhibits_assignment" class="absolute inhibition" source="or_left" target="assignment_inhibition_target">
+      <start x="648" y="220"/>
+      <end x="635" y="220"/>
+    </arc>
+  </map>
+</sbgn>

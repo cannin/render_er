@@ -165,7 +165,7 @@ def main() -> None:
     run_renderer(
         "rust",
         ["cargo", "run", "--release", "--", "draw_sbgnml"],
-        REPOSITORY_ROOT,
+        REPOSITORY_ROOT / "rust",
     )
     run_renderer(
         "go",

@@ -8,10 +8,10 @@
         <state variable="var"/>
         <bbox x="125" y="141" w="50" h="18"/>
       </glyph>
-    </glyph>
-    <glyph id="value_1" class="variable value">
-      <label text="value 1"/>
-      <bbox x="119" y="35" w="62" h="22"/>
+      <glyph id="value_1" class="state variable">
+        <state value="value 1"/>
+        <bbox x="119" y="35" w="62" h="22"/>
+      </glyph>
     </glyph>
     <glyph id="entity_b" class="entity">
       <label text="entity B"/>
@@ -24,15 +24,16 @@
       <start x="150" y="57"/>
       <end x="150" y="141"/>
     </arc>
-    <arc id="interaction" class="interaction" source="entity_a" target="entity_b">
-      <glyph id="interaction_outcome" class="outcome">
-        <bbox x="294" y="174" w="12" h="12"/>
-      </glyph>
-      <port id="interaction_target" x="300" y="180"/>
+    <arc id="assignment_to_entity_b" class="assignment" source="entity_a" target="entity_b">
+      <port id="assignment_target" x="300" y="180"/>
       <start x="210" y="180"/>
       <end x="390" y="180"/>
     </arc>
-    <arc id="stimulation" class="stimulation" source="assignment_outcome" target="interaction_target">
+    <arc id="assignment_to_entity_a" class="assignment" source="entity_b" target="entity_a">
+      <start x="390" y="180"/>
+      <end x="210" y="180"/>
+    </arc>
+    <arc id="stimulation" class="stimulation" source="assignment_outcome" target="assignment_target">
       <start x="156" y="97"/>
       <next x="300" y="97"/>
       <end x="300" y="180"/>

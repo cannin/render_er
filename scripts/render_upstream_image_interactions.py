@@ -1096,8 +1096,9 @@ def main() -> None:
             REPOSITORY_ROOT,
         )
     rows = generate_examples()
-    run(["cargo", "build", "--release"], REPOSITORY_ROOT)
-    rust_renderer = REPOSITORY_ROOT / "target" / "release" / "render_er"
+    rust_directory = REPOSITORY_ROOT / "rust"
+    run(["cargo", "build", "--release"], rust_directory)
+    rust_renderer = rust_directory / "target" / "release" / "render_er"
 
     with tempfile.TemporaryDirectory(prefix="render-er-upstream-") as temporary:
         temporary_root = Path(temporary)

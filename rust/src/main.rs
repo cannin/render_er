@@ -19,7 +19,7 @@ const DEFAULT_PADDING_PX: f64 = 50.0;
 const RENDERER_VERSION: &str = env!("CARGO_PKG_VERSION");
 const ARROW_SIZE: f64 = 8.0;
 const CYTOSCAPE_ARROW_SCALE: f64 = 4.53125;
-const FONT_BYTES: &[u8] = include_bytes!("../assets/LiberationSans-Regular.ttf");
+const FONT_BYTES: &[u8] = include_bytes!("../../assets/LiberationSans-Regular.ttf");
 const SVG_SANS_FONT_FAMILY: &str = "Arial, 'Liberation Sans', Arimo, sans-serif";
 
 const WHITE_COLOR: Rgba = Rgba::new(1.0, 1.0, 1.0, 1.0);
@@ -4228,7 +4228,7 @@ mod tests {
 
     #[test]
     fn parses_er_reference_card_classes() {
-        let (glyphs, arcs, _) = parse_example(include_str!("../examples/reference_card.sbgn"));
+        let (glyphs, arcs, _) = parse_example(include_str!("../../examples/reference_card.sbgn"));
         for class_name in [
             "entity",
             "outcome",
@@ -4270,7 +4270,7 @@ mod tests {
     #[test]
     fn er_all_glyphs_covers_the_level_one_reference_card() {
         let (glyphs, arcs, _) =
-            parse_example(include_str!("../render_examples/er_all_glyphs.sbgn"));
+            parse_example(include_str!("../../render_examples/er_all_glyphs.sbgn"));
         for class_name in [
             "entity",
             "outcome",
@@ -4326,7 +4326,7 @@ mod tests {
 
     #[test]
     fn parses_arcgroup_interaction_nodes_and_arc_outcomes() {
-        let (glyphs, _, _) = parse_example(include_str!("../examples/reference_card.sbgn"));
+        let (glyphs, _, _) = parse_example(include_str!("../../examples/reference_card.sbgn"));
         assert!(glyphs.iter().any(|glyph| glyph.id == "glyph32"));
         assert!(glyphs.iter().any(|glyph| glyph.id == "arc0.0"));
     }
@@ -4394,7 +4394,7 @@ mod tests {
 
     #[test]
     fn preserves_nested_entity_parentage() {
-        let (glyphs, _, _) = parse_example(include_str!("../examples/nested_entity.sbgn"));
+        let (glyphs, _, _) = parse_example(include_str!("../../examples/nested_entity.sbgn"));
         let child = glyphs
             .iter()
             .find(|glyph| glyph.id == "subunit")
@@ -4515,7 +4515,8 @@ mod tests {
 
     #[test]
     fn renders_multiline_labels_to_svg() {
-        let (glyphs, arcs, bounds) = parse_example(include_str!("../examples/reference_card.sbgn"));
+        let (glyphs, arcs, bounds) =
+            parse_example(include_str!("../../examples/reference_card.sbgn"));
         let (transform, width, height) = transform_with_padding(bounds, 10.0, None, None);
         let mut backend = SvgBackend::new(width, height, None).expect("SVG backend should start");
         render_scene(

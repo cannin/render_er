@@ -14,14 +14,15 @@ outcomes attached to statement arcs, arc ports, bend points, and every ER Level
 ## Quick start
 
 ```bash
-cargo run --release -- draw_sbgnml \
+cargo --manifest-path rust/Cargo.toml run --release -- draw_sbgnml \
   --input-path examples/figure_1_1.sbgn \
   --output-path output/figure_1_1.svg
 ```
 
 Use `.png` as the output extension for raster output. When `--output-path` is
 omitted, both formats are written beside the input file. Run
-`cargo run -- --help` for all sizing and styling options.
+`cargo --manifest-path rust/Cargo.toml run -- --help` for all sizing and styling
+options.
 
 ## Complete specification figure set
 
@@ -49,7 +50,7 @@ The complete figure mapping and validation notes are in
 Render one source SVG directly with Rust:
 
 ```bash
-cargo run --release -- draw_svg \
+cargo --manifest-path rust/Cargo.toml run --release -- draw_svg \
   --input-path figure.svg \
   --output-path figure.png \
   --scale 2
@@ -128,9 +129,9 @@ The selection criteria and exclusions are documented in
 ## Verification
 
 ```bash
-cargo fmt -- --check
-cargo clippy --all-targets --all-features -- -D warnings
-cargo test
+cargo fmt --manifest-path rust/Cargo.toml -- --check
+cargo clippy --manifest-path rust/Cargo.toml --all-targets --all-features -- -D warnings
+cargo test --manifest-path rust/Cargo.toml
 ```
 
 To validate an example against the official LibSBGN schema:
